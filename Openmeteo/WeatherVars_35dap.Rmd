@@ -1,0 +1,115 @@
+---
+title: "Create weather vars for canopy closure prediction"
+subtitle: "where the vars are between planting date and 35 dap"
+author: "Denis Shah"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+```{r libraries}
+library(tidyverse)
+library(DBI)
+library(RSQLite)
+
+library(tictoc)
+```
+
+
+```{r the-environments-dataframe}
+# The observational matrix:
+load(here::here("Data", "Survey.RData"))  # df
+
+env_wm <- 
+  df %>% 
+  # Filter out the PA fields (Potter county):
+  dplyr::filter(! county == "Potter") %>% 
+  # Filter out the locations missing gps coords:
+  dplyr::filter(!is.na(latitude), !is.na(longitude)) %>% 
+  # Vars to define the environment for each field:
+  dplyr::select(subject, planting.date) %>%
+  dplyr::distinct(.) %>% 
+  dplyr::mutate(env = paste0("sub_", subject)) %>% 
+  # Arrange the columns:
+  dplyr::select(env, subject, planting.date)
+```
+
+
+```{r database-connections}
+# Connect to the daily sqlite database:
+condaily <- DBI::dbConnect(RSQLite::SQLite(), "wm_daily.sqlite", extended_types = TRUE)
+```
+
+
+```{r database-tables}
+# REMINDER: what tables are in these databases?
+
+# `wm_daily.sqlite` has tables of daily time series for sunshine_duration and rain_sum for each env. 
+# For example:
+DBI::dbListTables(condaily) %>% str_subset(., "_1$")
+# A list of the vars in each daily table ("Date", "sunshine_duration", "rain_sum"):
+dbReadTable(condaily, "sub_1") |> names()
+```
+
+
+
+```{r functions}
+vars.daily.24h <- function(i) {
+  # Retrieve the subset of the daily time series from planting.date to sampling.date
+  # Args:
+  #  i = index for the row in the env_wm data frame
+  # Returns:
+  #  a data frame with columns for Date and the series on which the var is calculated
+  
+  x <- env_wm[i, ]
+  
+  # The start and end dates for the window as numerics:
+  start <- as.numeric(x$planting.date)
+  # end date is 35 dap:
+  end <- as.numeric(x$planting.date + 35)
+  
+  z <- 
+    tbl(condaily,  x$env) %>% 
+    dplyr::filter(Date >= start & Date <= end) %>%
+    collect()
+  
+  return(z)
+}  # end function vars.daily.24h
+
+# Example of use:
+# vars.daily.24h(i = 5)
+```
+
+
+
+```{r calculate-the-wvars}
+# Calculate the weather variables:
+# sundur = sum of sunshine duration from planting.date to sampling.date (hours)
+# rain = sum of rain from planting.date to sampling.date (mm)
+tic()
+foo <-
+  map(1:nrow(env_wm), function(j) {
+    vars.daily.24h(j) %>% 
+    # sunshine duration in hours, rain in mm
+    dplyr::summarise(sundur = sum(sunshine_duration)/3600, rain = sum(rain_sum))}) %>% 
+  bind_rows()
+toc()  # 10 sec
+
+
+wm_wvars_35dap <- bind_cols(env_wm, foo)
+```
+
+
+```{r save-the-data}
+save(wm_wvars_35dap, file = here::here("Openmeteo", "wm_WeatherVars_35dap.RData"))
+```
+
+
+```{r database-disconnect}
+# Disconnect when done:
+DBI::dbDisconnect(condaily)
+```
+

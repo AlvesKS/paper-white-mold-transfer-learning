@@ -1,0 +1,167 @@
+---
+title: "Snap bean field locations"
+subtitle: "with weather stations"
+author: "Denis Shah"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+```{r libraries}
+library(tidyverse)
+library(maps)
+# library(sf)
+# library(viridis)
+# library(terra)
+```
+
+
+# Data preparation
+```{r data-preparation}
+# The observational matrix:
+load(here::here("Data", "Survey.RData"))  # df
+
+# Data frame of the fields and their locations:
+surv <-
+  df %>% 
+  # Filter out the PA fields (Potter county):
+  dplyr::filter(! county == "Potter") %>% 
+  dplyr::select(subject, latitude, longitude, sampling.date, wm) %>% 
+  dplyr::filter(!is.na(latitude), !is.na(longitude)) %>% 
+  dplyr::arrange(subject, sampling.date) %>% 
+  dplyr::group_by(subject) %>%
+  # The last sampling date for each field:
+  dplyr::slice_max(sampling.date, n = 1, with_ties = FALSE) %>%
+  dplyr::ungroup() %>% 
+  dplyr::filter(!is.na(wm)) %>% 
+  dplyr::mutate(wm = ifelse(wm > 0, 1, 0)) %>% 
+  dplyr::select(subject, latitude, longitude)
+
+
+# Data frame of weather stations in NY. It is called st and the location columns are LAT and LON
+load(here::here("Maps", "NYStations.RData"))  # st
+
+# No outliers:
+st %>% 
+  dplyr::filter(LAT > 45 | LAT < 39)
+
+# st <-
+#   st %>% 
+#   dplyr::filter(!NAME == "NIAGARA FALLS")
+
+# The counties in which the surveyed fields were located
+counties <-
+  df %>% 
+  # Filter out the PA fields (Potter county):
+  dplyr::filter(! county == "Potter") %>% 
+  dplyr::select(county) %>% 
+  dplyr::distinct() %>% 
+  dplyr::pull() %>% 
+  as.character()
+
+# Counties in lowercase:
+counties_lc <- tolower(counties)
+```
+
+
+# Example using the `maps` package
+```{r maps-package-example, eval=FALSE}
+# This produces a simple map of the state. I used this as a check on the ranges of lat and lon, which were then used to check the st data frame for outliers
+maps::map('county', region = 'new york', col = "#5E610B")
+map.axes(cex.axis = 0.8) 
+title(xlab = "Longitude", ylab = "Latitude", cex.lab = 0.8)
+```
+
+
+# Example using ggplot2
+Use the function `map_data` from `ggplot2`, which converts the map to a data frame. 
+The most important variable we need to pass to map_data is the name of map provided by the `maps` package.
+
+```{r ggplot2-example, eval=FALSE}
+ny_map_data <- map_data('county', region = 'new york')
+
+ggplot() + 
+  geom_polygon(data = ny_map_data, aes(x = long, y = lat, group = group), color = "black", fill = "#fafced") +
+  labs(x = "longitude", y = "latitude") +
+  coord_fixed(1.3) +
+  theme(panel.background = element_blank())
+```
+
+
+# Expand to color only the counties in which we had samples
+```{r ggplot2-example-expanded, eval=FALSE}
+ggplot() + 
+  geom_polygon(data = ny_map_data, 
+               aes(x = long, y = lat, group = group), 
+               color = "black", 
+               fill = "white") +
+  geom_polygon(data = ny_map_data %>% dplyr::filter(subregion %in% counties_lc), 
+               aes(x = long, y = lat, group = group), 
+               color = "black", 
+               fill = "#fafced") +
+  # Fix for the point colors
+  geom_point(data = surv,
+             aes(longitude, latitude),
+             color = "blue3",  # Direct color assignment
+             size = 1) +
+  geom_point(data = st,
+             aes(LON, LAT),
+             color = "red3",  # Direct color assignment
+             size = 1,
+             pch = 8) +
+  labs(x = "longitude", y = "latitude") +
+  coord_fixed(1.3, 
+              xlim = c(-80,-76.7),
+              ylim = c(41.8, 43.5)) +
+  theme(panel.background = element_blank())
+```
+
+
+# Using ggplot, sf and tigris shapefile
+This is the best approach I think. Fields and stations do not appear in the Lakes!
+We are able to set the crs.
+
+```{r finalized-map-option}
+library(tidyverse)
+library(sf)
+library(tigris)
+
+# Download New York state counties
+ny_counties <- counties(state = "NY", cb = TRUE) %>%
+  st_transform(crs = 4326)
+
+# Create a vector of counties to highlight
+highlight_counties <- counties
+
+# Add a column for fill color
+ny_counties$fill_color <- ifelse(ny_counties$NAME %in% highlight_counties, "#fafced", NA)
+
+# Convert surv dataframe to sf object
+surv_sf <- st_as_sf(surv, coords = c("longitude", "latitude"), crs = 4326)
+
+# Convert st dataframe to sf object
+st_sf <- st_as_sf(st, coords = c("LON", "LAT"), crs = 4326)
+
+# Create the map
+ggplot() +
+  geom_sf(data = ny_counties, aes(fill = fill_color), color = "black") +
+  geom_sf(data = surv_sf, color = "blue", size = 1) +
+  geom_sf(data = st_sf, color = "red3", size = 2, pch = 8) +
+  scale_fill_identity() +
+  theme(panel.background = element_blank()) +
+  coord_sf(xlim = c(-80, -76.7), ylim = c(41.8, 43.5))
+  
+```
+
+
+
+
+
+
+
+
+
+

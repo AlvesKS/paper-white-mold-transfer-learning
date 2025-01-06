@@ -1,0 +1,478 @@
+---
+title: "White mold FDA Exploratory"
+author: "Denis Shah"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    fig_caption: yes
+    highlight: tango
+    number_sections: true
+    theme: cerulean
+    toc: yes
+    toc_depth: 4
+    toc_float: true
+    editor_options: 
+      chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE, eval=TRUE}
+options(digits = 3)
+require(knitr)
+## options
+knitr::opts_chunk$set(eval = TRUE, echo = FALSE, cache = FALSE)
+```
+
+
+```{r Libraries, message=FALSE}
+library(tidyverse)
+library(ggthemes)
+library(grid)
+library(gridExtra)
+library(patchwork)
+
+library(tidyfun)
+# my modifications to the geom-spaghetti function (updated ggplot linewidth instead of size):
+source(here::here("FunctionalDataAnalysis", "FDAExploratory", "geom-spaghetti.R"))
+
+# theme_half_open is part of the cowplot themes
+# theme_set(theme_half_open(font_size = 12))
+```
+
+
+
+```{r Load-the-data}
+wm_load <- readr::read_csv(here::here("Data", "data_model_plus_weather_filtered.csv"), show_col_types = FALSE)
+```
+
+
+```{r Data-prep}
+# Simplify things. Keep only the weather-related variables and others needed for calculations
+wm_data <-
+  wm_load %>%
+  dplyr::select(subject, date, planting.date, sampling.date, wm, d2m, t2m_mean, t2m_max, t2m_min, st, sp, sm, rh) %>%
+  # Do the filtering steps before doing any calculations or feature engineering:
+  # wm_load has identical data for each of the sampling dates, which is why there is a filtering step on sampling.date.
+  dplyr::group_by(subject) %>% 
+  dplyr::filter(sampling.date == max(sampling.date)) %>%
+  dplyr::ungroup() %>% 
+  # Add the response variable (wm present or absent; binary):
+  dplyr::group_by(subject) %>% 
+  dplyr::mutate(wm = (mean(wm, na.rm = T) > 0)*1) %>% 
+  # wm as a factor:
+  dplyr::mutate(wm = factor(wm, levels = c(0, 1))) %>%
+  dplyr::ungroup() %>% 
+  dplyr::filter(!is.na(wm)) %>% 
+  # Calculate dap (as a numeric):
+  dplyr::mutate(dap = as.numeric(date - planting.date)) %>%
+  # Convert temperatures from Kelvin to degrees Celsius:
+  dplyr::mutate(across(d2m:st, ~ .x - 273.15)) %>%
+  # dewpoint depression:
+  dplyr::mutate(dpd = t2m_mean - d2m) %>%
+  # surface pressure in kPa:
+  dplyr::mutate(sp = sp/1000) %>%
+  # Ratio of soil temperature to soil moisture:
+  dplyr::mutate(stsm = st/sm) %>%
+  # Difference in max and min temperatures:
+  dplyr::mutate(tdiff = t2m_max - t2m_min) %>%
+  # estimate GDD (base 0). NB: base 0 is reasonable for snap bean; see the Jenni et al. (2000) paper. I think we want GDD to start accumulating the day after planting date onwards...
+  # I use the day after planting, because we don't know exactly what time of the day the field was planted.
+  dplyr::mutate(gddi = ifelse(dap <= 0, 0, (t2m_max + t2m_min)*0.5 - 0)) %>%
+  dplyr::group_by(subject) %>% 
+  # We don't want the gddi column after creating gdd:
+  dplyr::mutate(gdd = cumsum(gddi), .keep = "unused") %>%
+  dplyr::ungroup() %>%
+  # Keep only the columns you need:
+  dplyr::select(subject, dap, wm:gdd)
+```
+
+
+```{r Exploring-how-to-code-tidyfun, eval=FALSE}
+# To avoid problems with domain-related calculations in fda, check on the range of dap for each subject.
+wm_data %>%
+  dplyr::group_by(subject) %>%
+  dplyr::summarise(min_dap = min(dap), max_dap = max(dap)) %>%
+  # min_dap is -30 for all subjects, but max_dap varies:
+  # print(n = Inf)
+  # dplyr::pull(max_dap) %>%
+  # range() # 50 to 77
+  ggplot(., aes(x = max_dap)) +
+  geom_histogram(binwidth = 1, fill = "#69b3a2", colour = "black", alpha = 0.8) +
+  theme_bw() +
+  xlab("Max dap") +
+  ylab("Frequency")
+
+# The empirical cdf for max_dap:
+wm_data %>%
+  dplyr::group_by(subject) %>%
+  dplyr::summarise(min_dap = min(dap), max_dap = max(dap)) %>%
+  ggplot(., aes(max_dap)) + 
+  stat_ecdf(geom = "step") +
+  theme_bw() +
+  labs(x = "Max dap", y = "ECDF")
+
+
+# Create a tf object:
+foo_df <-
+  wm_data %>%
+  dplyr::select(subject, dap, wm, d2m) %>% 
+  # Not restricting the dap range (max_dap is variable by subject):
+  tf_nest(d2m, .id = subject, .arg = dap)
+
+# Plot the data for a few subjects:  
+foo_df %>% 
+  dplyr::filter(subject %in% 1:5) %>%
+  ggplot(aes(tf = d2m, colour = factor(wm))) + 
+  geom_spaghetti(alpha = 1)
+
+
+# The mean for each wm group, then a lowess smooth.
+# Of course, you have to choose a proper span parameter (f argument) to avoid over-smoothing. 
+# tf_smooth uses f = .15 as the default instead of the typical .75
+foo_df %>% 
+  dplyr::group_by(wm) %>% 
+  dplyr::summarize(mean_d2m = mean(d2m)) %>% 
+  dplyr::mutate(smooth_mean = tf_smooth(mean_d2m, method = "lowess", f = 0.15)) %>%
+  ggplot(aes(tf = smooth_mean, color = wm)) +
+  geom_spaghetti(linewidth = 1.25, alpha = 1)
+
+# Using a spline basis representation to smooth the means:
+foo_df %>% 
+  dplyr::group_by(wm) %>% 
+  dplyr::summarize(mean_d2m = mean(d2m)) %>% 
+  dplyr::mutate(smooth_mean = tfb(mean_d2m)) %>%
+  ggplot(aes(tf = smooth_mean, color = wm)) +
+  geom_spaghetti(linewidth = 1.25, alpha = 1) +
+  scale_x_continuous(breaks = seq(-30, 70, by = 10)) +
+  annotate("rect", ymin = -Inf, ymax = Inf, xmin = 35, xmax = 50, 
+           fill = "steelblue", alpha = 0.2) +
+  geom_vline(xintercept = 0, color = "gray", linetype = "dashed") +
+  scale_color_colorblind(labels = c( "Absent","Present")) +
+  theme_bw() +
+  labs(x = "Days relative to sowing",
+       y = "foo",
+       color = "White mold") +
+  theme(legend.position = "bottom")
+
+
+# Next, want to plot the difference between the wm curves
+x <-
+  foo_df %>% 
+  group_by(wm) %>% 
+  summarize(mean_d2m = mean(d2m)) %>% 
+  # Will use a lowess smoother here instead of spline basis:
+  mutate(smooth_mean = tf_smooth(mean_d2m, method = "lowess", f = 0.15)) %>%
+  # mutate(smooth_mean = tfb(mean_d2m))
+  # Prepping to unnest:
+  select(-mean_d2m) %>%
+  tf_unnest(cols = "smooth_mean") %>%
+  # These steps are to be able to get the difference between the two mean curves
+  pivot_wider(names_from = wm, values_from = smooth_mean_value, names_prefix = "wm=") %>%
+  mutate(diff = `wm=1` - `wm=0`)
+
+
+tibble(id = 1, dap = x$smooth_mean_arg, diff = x$diff) %>%
+  # Get back into tfd format:
+  tf_nest(diff, .id = id, .arg = dap) %>%
+  ggplot(aes(tf = diff)) +
+  geom_spaghetti(linewidth = 1.25, alpha = 1, color = "black") +
+  geom_hline(yintercept = 0, color = "gray", linetype = "dashed") +
+  theme_bw() +
+  labs(x = "Days relative to sowing",
+       y = "Difference",
+       title = "foo")
+```
+
+
+```{r functions}
+# GOAL: Generalize the code for plotting the mean curves and difference between the mean curves:
+
+wm.tfd <- function(x) {
+  # Create a tidy functional data object for a weather variable
+  # Args:
+  #  x = unquoted variable name
+  # Returns:
+  #  a tidy functional data object
+  #
+  .x = enquo(x)
+  
+  # Create a tf object:
+  df <-
+    wm_data %>%
+    dplyr::select(subject, dap, wm, !!.x) %>% 
+    # Not restricting the dap range (max_dap is variable by subject):
+    tf_nest(!!.x, .id = subject, .arg = dap)
+  
+  return(df)
+}
+
+
+wm.curves <- function(x, .ylab = NULL, ...) {
+  # Plot the smoothed mean curves for wm = 0 and wm = 1
+  # Args:
+  #  x = unquoted variable name
+  # Returns:
+  #  a ggplot of the smoothed mean curves for wm = 0 and wm = 1
+  .x = enquo(x)
+  
+  # Create a tf object:
+  suppressMessages(
+    wm_data %>%
+      dplyr::select(subject, dap, wm, !!.x) %>% 
+      # Create a tf object:
+      # Not restricting the dap range (max_dap is variable by subject):
+      tf_nest(!!.x, .id = subject, .arg = dap) %>%
+      dplyr::group_by(wm) %>%
+      # Get the means:
+      dplyr::summarize(var_mean = mean(!!.x)) %>%
+      # We used suppressMessages() to suppress output generated by the tfb arg:
+      # Using a spline basis representation to smooth the means:
+      dplyr::mutate(smooth_mean = tfb(var_mean)) %>%
+      ggplot(aes(tf = smooth_mean, color = wm)) +
+      geom_spaghetti(linewidth = 1.25, alpha = 1) +
+      scale_x_continuous(breaks = seq(-30, 70, by = 10)) +
+      annotate("rect", ymin = -Inf, ymax = Inf, xmin = 35, xmax = 50,
+               fill = "steelblue", alpha = 0.2) +
+      geom_vline(xintercept = 0, color = "gray", linetype = "dashed") +
+      ggthemes::scale_color_colorblind(labels = c( "Absent","Present")) +
+      theme_bw() +
+      labs(x = "Days relative to planting",
+           y = .ylab,
+           color = "White mold") +
+      theme(axis.title.y = element_text(size = 8)) +
+      theme(
+        axis.text.x = element_text(size = 7),  # Decrease x-axis tick label size
+        axis.text.y = element_text(size = 7)  # Decrease y-axis tick label size
+        ) +
+      theme(legend.position = "bottom")
+    )
+} # end function wm.curves
+
+
+wm.diff.curve <- function(x, .span = 0.15, my.title = NULL) {
+  # Plot the difference between the wm curves
+  # Args:
+  #  x = unquoted variable name
+  #  .span = span for the lowess smoother
+  # Returns:
+  #  a ggplot of the smoothed difference between the wm = 0 and wm = 1 mean curves
+  
+  .x = enquo(x)
+  
+  df <- wm.tfd(!!.x)
+  
+  z <-
+    suppressMessages(
+      df %>% 
+      dplyr::group_by(wm) %>% 
+      dplyr::summarize(var_mean = mean(!!.x)) %>% 
+      # Will use a lowess smoother here instead of spline basis:
+      dplyr::mutate(smooth_mean = tf_smooth(var_mean, method = "lowess", f = .span)) %>%
+      # dplyr::mutate(smooth_mean = tfb(var_mean)) %>%
+      # Prepping to unnest:
+      dplyr::select(-var_mean) %>%
+      tf_unnest(cols = "smooth_mean") %>%
+      # These steps are to be able to get the difference between the two mean curves
+      tidyr::pivot_wider(names_from = wm, values_from = smooth_mean_value, 
+                         names_prefix = "wm=") %>%
+      dplyr::mutate(diff = `wm=1` - `wm=0`) )
+  
+  tibble(id = 1, dap = z$smooth_mean_arg, diff = z$diff) %>%
+    # Get back into tfd format:
+    tf_nest(diff, .id = id, .arg = dap) %>%
+    ggplot(aes(tf = diff)) +
+    geom_spaghetti(linewidth = 1.25, alpha = 1, color = "black") +
+    scale_x_continuous(breaks = seq(-30, 70, by = 10)) +
+    annotate("rect", ymin = -Inf, ymax = Inf, xmin = 35, xmax = 50, 
+           fill = "steelblue", alpha = 0.2) +
+    geom_hline(yintercept = 0, color = "gray", linetype = "dashed") +
+    geom_vline(xintercept = 0, color = "gray", linetype = "dashed") +
+    theme_bw() +
+    labs(x = "Days relative to sowing",
+         y = "Difference",
+         title = my.title)
+  }  # end function wm.diff.curve
+
+
+# Example of use:
+# wm.diff.curve(d2m, .span = 0.15)
+```
+
+
+# Environmental variables {.tabset .tabset-fade .tabset-pills}
+## Dew point {.tabset .tabset-fade .tabset-pills}
+### Means
+```{r dewpoint-means}
+# d2m = dewpoint temperature (2m)
+wm.curves(d2m, .ylab = "Dew point (°C)")
+```
+
+
+### Difference
+```{r dewpoint-difference}
+wm.diff.curve(d2m, .span = 0.2, my.title = "Dew point")
+```
+
+
+## Mean air temperature {.tabset .tabset-fade .tabset-pills}
+### Means
+```{r mean-air-temperature-means}
+# t2m_mean = mean air temperature (2m)
+wm.curves(t2m_mean, .ylab = "Mean air temperature (°C)")
+```
+
+
+### Difference
+```{r mean-air-temperature-difference}
+wm.diff.curve(t2m_mean, .span = 0.2, my.title = "Mean air temperature")
+```
+
+
+## Max air temperature {.tabset .tabset-fade .tabset-pills}
+### Means
+```{r max-air-temperature-means}
+# t2m_max = max air temperature (2m)
+wm.curves(t2m_max, .ylab = "Max. air temperature (°C)")
+```
+
+### Difference
+```{r max-air-temperature-difference}
+wm.diff.curve(t2m_max, .span = .2, my.title = "Max. air temperature")
+```
+
+
+## Min air temperature {.tabset .tabset-fade .tabset-pills}
+### Means
+```{r min-air-temperature-means}
+# t2m_min = min air temperature (2m)
+wm.curves(t2m_min, .ylab = "Min. air temperature (°C)")
+```
+
+### Difference
+```{r min-air-temperature-difference}
+wm.diff.curve(t2m_min, my.title = "Min. air temperature")
+```
+
+## Max - Min air temperature {.tabset .tabset-fade .tabset-pills}
+### Means
+```{r tdiff-means}
+wm.curves(tdiff, .ylab = "Max. - Min. air temperature (°C)")
+```
+
+### Difference
+```{r tdiff-difference}
+wm.diff.curve(tdiff, my.title = "Max. - Min. air temperature")
+```
+
+
+## Dewpoint depression {.tabset .tabset-fade .tabset-pills}
+### Means
+```{r dewpoint-depression-means}
+# dpd = dewpoint depression
+wm.curves(dpd, .ylab = "Dew point depression (°C)")
+```
+
+### Difference
+```{r dewpoint-depression-difference}
+wm.diff.curve(dpd, my.title = "Dew point depression")
+```
+
+
+## Soil temperature {.tabset .tabset-fade .tabset-pills}
+### Means
+```{r soil-temperature-means}
+# st = soil temperature 
+wm.curves(st, .ylab = "Soil temperature (°C)")
+```
+
+### Difference
+```{r soil-temperature-difference}
+wm.diff.curve(st, my.title = "Soil temperature")
+```
+
+
+## Soil moisture {.tabset .tabset-fade .tabset-pills}
+### Means
+```{r soil-moisture-means}
+# sm = soil moisture
+wm.curves(sm, .ylab = "Soil Moisture (m³/m³)")
+```
+
+### Difference
+```{r soil-moisture-difference}
+wm.diff.curve(sm, my.title = "Soil Moisture")
+```
+
+
+## Ratio of soil temperature: soil moisture {.tabset .tabset-fade .tabset-pills}
+### Means
+```{r stsm-ratio-means}
+# stsm = Ratio of soil temperature: soil moisture
+wm.curves(stsm, .ylab = "Soil temperature: Soil moisture")
+```
+
+### Difference
+```{r stsm-ratio-difference}
+wm.diff.curve(stsm, my.title = "Soil temperature: Soil moisture")
+```
+
+
+## Surface pressure {.tabset .tabset-fade .tabset-pills}
+### Means
+```{r surface-pressure-means}
+# sp = surface pressure
+wm.curves(sp, .ylab = "Surface pressure (kPa)")
+```
+
+### Difference
+```{r surface-pressure-difference}
+wm.diff.curve(sp, .span = .2, my.title = "Surface pressure")
+```
+
+
+## Relative humidity {.tabset .tabset-fade .tabset-pills}
+### Means
+```{r relative-humidity-means}
+# rh = relative humidity
+wm.curves(rh, .ylab = "Relative Humidity (%)")
+```
+
+### Difference
+```{r relative-humidity-difference}
+wm.diff.curve(rh, .span = .2, my.title = "Relative Humidity")
+```
+
+
+## Growing degree days {.tabset .tabset-fade .tabset-pills}
+### Means
+```{r gdd-means}
+# gdd = growing degree days
+wm.curves(gdd, .ylab = "Growing degree days")
+```
+
+### Difference
+```{r gdd-difference}
+wm.diff.curve(gdd, .span= 0.3, my.title = "Growing degree days")
+```
+
+
+# Publication figure
+
+```{r Publication-figure, fig.height=8.0}
+# This is a replacement for Fig. 3 in the PNAS paper
+p1 <- wm.curves(d2m, .ylab = "Dewpoint (°C)")
+p2 <- wm.curves(t2m_mean, .ylab = "Air temperature (°C)")
+p3 <- wm.curves(dpd, .ylab = "Dewpoint depression (°C)")
+p4 <- wm.curves(st, .ylab = "Soil temperature (°C)")
+p5 <- wm.curves(sm, .ylab = "Soil moisture (m³/m³)")
+p6 <- wm.curves(stsm, .ylab = "Soil temperature:moisture ratio")
+p7 <- wm.curves(sp, .ylab = "Surface pressure (kPa)")
+p8 <- wm.curves(rh, .ylab = "Relative humidity (%)")
+  
+  
+p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 +
+  plot_annotation(tag_levels = 'A') +
+  plot_layout(nrow = 4, byrow = T) + 
+  plot_layout(guides = 'collect', axis_titles = "collect") &
+  theme(legend.position='bottom')
+```

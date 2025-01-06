@@ -1,0 +1,266 @@
+---
+title: "Daily ERA data accessed via the opemeteo R package wrapper to open-meteo.com"
+author: "Denis Shah"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r libraries}
+library(tidyverse)
+library(openmeteo)
+
+library(DBI)
+library(RSQLite)
+```
+
+
+```{r the-environments-dataframe}
+# The observational matrix:
+load(here::here("Data", "Survey.RData"))  # df
+
+env_wm <- 
+  df %>% 
+  # Filter out the PA fields (Potter county):
+  dplyr::filter(! county == "Potter") %>% 
+  # Filter out the locations missing gps coords:
+  dplyr::filter(!is.na(latitude), !is.na(longitude)) %>% 
+  # Vars to define the environment for each field:
+  dplyr::select(subject, latitude, longitude, year, planting.date) %>%
+  dplyr::distinct(.) %>% 
+  dplyr::mutate(env = paste0("sub_", subject)) %>% 
+  # Arrange the columns:
+  dplyr::select(env, subject, latitude, longitude, year, planting.date)
+```
+
+
+```{r functions}
+my.args <- function(i) {
+  # Collects lat, lon, start (= planting.date) and end date (= 80 dap), env name for a given environment (subject/field)
+  # Args:
+  #  i = a numeric for the row
+  # Returns:
+  #  a list with the data fields given above
+  #
+  # subject
+  subj <- env_wm[i, "subject"]
+  # lat
+  the_lat <- env_wm[i, "latitude"]
+  # lon
+  the_lon <- env_wm[i, "longitude"]
+  # start date will be the planting.date:
+  the_start <- env_wm[i, "planting.date"]
+  # end date will be 80 dap:
+  the_end <- the_start + 80
+  # time zone:
+  the_tz <- "America/New_York"
+  # The data object name:
+  char_entry <- env_wm[i, "env"]
+  
+  # Place all the parts in a named list:
+  z <- list(subject = subj, lat = the_lat, lon = the_lon, start = the_start, end = the_end, df = char_entry, tz = the_tz)
+  return(z)
+}
+
+# Example of use:
+# my.args(226)
+
+
+era.data <- function(lat, lon, my.start, my.end, my.tz) {
+  # A wrapper function around the openmeteo::weather_history function
+  # Args:
+  #  lat = the latitude of the location
+  #  lon = the longitude of the location
+  #  my.start = character string of the start date, e.g., "2020-05-15"
+  #  my.end = character string of the end date
+  #  my.tz = character string for a valid TZ identifier
+  # Returns:
+  #  a tibble of the hourly weather data between the specified start and end dates for the location
+  # NB: precipitation units defaults to mm
+  # Output units:
+  #  sunshine_duration = seconds
+  #  rain_sum = mm
+  #  
+  
+  weather_history(location = c(lat, lon),
+                  start = my.start,
+                  end = my.end,
+                  daily = list("sunshine_duration",
+                               "rain_sum"),
+                  response_units = list(precipitation_unit = "mm"),
+                  model = "era5_seamless",
+                  timezone = my.tz) %>% 
+    dplyr::rename_with(~sub("^daily_", "", .), starts_with("daily_")) %>% 
+    dplyr::rename(Date = date)
+}
+```
+
+
+```{r initialize-sqlite-database}
+con <- DBI::dbConnect(RSQLite::SQLite(), "wm_daily.sqlite", extended_types = TRUE)
+```
+
+```{r define-column-classes}
+# R column classes:
+colClasses <- c('Date', rep('numeric', 2))
+```
+
+
+<!-- Going to chunk the openmeteo requests so as to avoid timeouts due to large requests -->
+```{r env-1-to-50}
+for (j in 1:50) {
+  y <- my.args(j)
+  # Now pass the args saved in `y`:
+  assign(y$df, era.data(lat = y$lat, lon = y$lon, my.start = y$start, my.end = y$end, my.tz = y$tz))
+  # For large number of environments, add a pause between each iteration call:
+  Sys.sleep(2)
+}
+
+# Loop over the names in env.vec to write the dataframes to the sqlite database:
+for (i in 1:50) {
+  dbWriteTable(con, env_wm[i, "env"], get(env_wm[i, "env"]), colClasses = colClasses, overwrite = TRUE)
+}
+
+# Remove the data frames from the global environment:
+remove(list = ls()[grep("^sub_", ls())])
+```
+
+```{r env-51-to-100}
+for (j in 51:100) {
+  y <- my.args(j)
+  # Now pass the args saved in `y`:
+  assign(y$df, era.data(lat = y$lat, lon = y$lon, my.start = y$start, my.end = y$end, my.tz = y$tz))
+  # For large number of environments, add a pause between each iteration call:
+  Sys.sleep(2)
+}
+
+# Loop over the names in env.vec to write the dataframes to the sqlite database:
+for (i in 51:100) {
+  dbWriteTable(con, env_wm[i, "env"], get(env_wm[i, "env"]), colClasses = colClasses, overwrite = TRUE)
+}
+
+# Remove the data frames from the global environment:
+remove(list = ls()[grep("^sub_", ls())])
+```
+
+```{r env-101-to-150}
+for (j in 101:150) {
+  y <- my.args(j)
+  # Now pass the args saved in `y`:
+  assign(y$df, era.data(lat = y$lat, lon = y$lon, my.start = y$start, my.end = y$end, my.tz = y$tz))
+  # For large number of environments, add a pause between each iteration call:
+  Sys.sleep(2)
+}
+
+# Loop over the names in env.vec to write the dataframes to the sqlite database:
+for (i in 101:150) {
+  dbWriteTable(con, env_wm[i, "env"], get(env_wm[i, "env"]), colClasses = colClasses, overwrite = TRUE)
+}
+
+# Remove the data frames from the global environment:
+remove(list = ls()[grep("^sub_", ls())])
+```
+
+```{r env-151-to-200}
+for (j in 151:200) {
+  y <- my.args(j)
+  # Now pass the args saved in `y`:
+  assign(y$df, era.data(lat = y$lat, lon = y$lon, my.start = y$start, my.end = y$end, my.tz = y$tz))
+  # For large number of environments, add a pause between each iteration call:
+  Sys.sleep(2)
+}
+
+# Loop over the names in env.vec to write the dataframes to the sqlite database:
+for (i in 151:200) {
+  dbWriteTable(con, env_wm[i, "env"], get(env_wm[i, "env"]), colClasses = colClasses, overwrite = TRUE)
+}
+
+# Remove the data frames from the global environment:
+remove(list = ls()[grep("^sub_", ls())])
+```
+
+```{r env-201-to-250}
+for (j in 201:250) {
+  y <- my.args(j)
+  # Now pass the args saved in `y`:
+  assign(y$df, era.data(lat = y$lat, lon = y$lon, my.start = y$start, my.end = y$end, my.tz = y$tz))
+  # For large number of environments, add a pause between each iteration call:
+  Sys.sleep(1)
+}
+
+# Loop over the names in env.vec to write the dataframes to the sqlite database:
+for (i in 201:250) {
+  dbWriteTable(con, env_wm[i, "env"], get(env_wm[i, "env"]), colClasses = colClasses, overwrite = TRUE)
+}
+
+# Remove the data frames from the global environment:
+remove(list = ls()[grep("^sub_", ls())])
+```
+
+```{r env-251-to-300}
+for (j in 251:300) {
+  y <- my.args(j)
+  # Now pass the args saved in `y`:
+  assign(y$df, era.data(lat = y$lat, lon = y$lon, my.start = y$start, my.end = y$end, my.tz = y$tz))
+  # For large number of environments, add a pause between each iteration call:
+  Sys.sleep(1)
+}
+
+# Loop over the names in env.vec to write the dataframes to the sqlite database:
+for (i in 251:300) {
+  dbWriteTable(con, env_wm[i, "env"], get(env_wm[i, "env"]), colClasses = colClasses, overwrite = TRUE)
+}
+
+# Remove the data frames from the global environment:
+remove(list = ls()[grep("^sub_", ls())])
+```
+
+```{r env-301-to-350}
+for (j in 301:350) {
+  y <- my.args(j)
+  # Now pass the args saved in `y`:
+  assign(y$df, era.data(lat = y$lat, lon = y$lon, my.start = y$start, my.end = y$end, my.tz = y$tz))
+  # For large number of environments, add a pause between each iteration call:
+  Sys.sleep(1)
+}
+
+# Loop over the names in env.vec to write the dataframes to the sqlite database:
+for (i in 301:350) {
+  dbWriteTable(con, env_wm[i, "env"], get(env_wm[i, "env"]), colClasses = colClasses, overwrite = TRUE)
+}
+
+# Remove the data frames from the global environment:
+remove(list = ls()[grep("^sub_", ls())])
+```
+
+```{r env-351-to-376}
+for (j in 351:376) {
+  y <- my.args(j)
+  # Now pass the args saved in `y`:
+  assign(y$df, era.data(lat = y$lat, lon = y$lon, my.start = y$start, my.end = y$end, my.tz = y$tz))
+  # For large number of environments, add a pause between each iteration call:
+  Sys.sleep(1)
+}
+
+# Loop over the names in env.vec to write the dataframes to the sqlite database:
+for (i in 351:376) {
+  dbWriteTable(con, env_wm[i, "env"], get(env_wm[i, "env"]), colClasses = colClasses, overwrite = TRUE)
+}
+
+# Remove the data frames from the global environment:
+remove(list = ls()[grep("^sub_", ls())])
+```
+
+```{r check-the-database}
+# Check that it worked:
+DBI::dbListTables(con) %>% length()
+```
+
+
+```{r disconnect-sqlite-database}
+# Disconnect when done:
+DBI::dbDisconnect(con)
+```
+

@@ -1,0 +1,156 @@
+---
+title: "Create summary vars for rain"
+subtitle: "pre-bloom and bloom through early pod fill"
+author: "Denis Shah"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+```{r libraries}
+library(tidyverse)
+library(DBI)
+library(RSQLite)
+
+library(tictoc)
+```
+
+
+```{r the-environments-dataframe}
+# The observational matrix:
+load(here::here("Data", "Survey.RData"))  # df
+
+env_wm <- 
+  df %>% 
+  # Filter out the PA fields (Potter county):
+  dplyr::filter(! county == "Potter") %>% 
+  # Filter out the locations missing gps coords:
+  dplyr::filter(!is.na(latitude), !is.na(longitude)) %>% 
+  # Vars to define the environment for each field:
+  dplyr::select(subject, planting.date) %>%
+  dplyr::distinct(.) %>% 
+  dplyr::mutate(env = paste0("sub_", subject)) %>% 
+  # Arrange the columns:
+  dplyr::select(env, subject, planting.date)
+```
+
+
+```{r database-connections}
+# Connect to the daily sqlite database:
+condaily <- DBI::dbConnect(RSQLite::SQLite(), "wm_daily.sqlite", extended_types = TRUE)
+```
+
+
+```{r database-tables}
+# REMINDER: what tables are in these databases?
+
+# `wm_daily.sqlite` has tables of daily time series for sunshine_duration and rain_sum for each env. 
+# For example:
+DBI::dbListTables(condaily) %>% str_subset(., "_1$")
+# A list of the vars in each daily table ("Date", "sunshine_duration", "rain_sum"):
+dbReadTable(condaily, "sub_1") |> names()
+```
+
+
+
+```{r functions}
+rain.to.35dap <- function(i) {
+  # Retrieve the subset of rain_sum the daily time series from planting.date to 35 dap
+  # Args:
+  #  i = index for the row in the env_wm data frame
+  # Returns:
+  #  a data frame with columns for Date and rain_sum from planting date to 35 dap
+  
+  x <- env_wm[i, ]
+  
+  # The start and end dates for the window as numerics:
+  start <- as.numeric(x$planting.date)
+  # end date is 35 dap:
+  end <- as.numeric(x$planting.date + 35)
+  
+  z <- 
+    tbl(condaily,  x$env) %>% 
+    dplyr::filter(Date >= start & Date <= end) %>%
+    dplyr::select(Date, rain_sum) %>% 
+    collect()
+  
+  return(z)
+}  # end function rain.to.35dap
+
+# Example of use:
+# rain.to.35dap(i = 5) %>%  tail()
+
+
+rain.36to50.dap <- function(i) {
+  # Retrieve the subset of rain_sum the daily time series from 36 to 50 dap
+  # Args:
+  #  i = index for the row in the env_wm data frame
+  # Returns:
+  #  a data frame with columns for Date and rain_sum from 36 to 50 dap
+  
+  x <- env_wm[i, ]
+  
+  # The start and end dates for the window as numerics:
+  # The start date is 36 dap:
+  start <- as.numeric(x$planting.date + 36)
+  # end date is 50 dap:
+  end <- as.numeric(x$planting.date + 50)
+  
+  z <- 
+    tbl(condaily,  x$env) %>% 
+    dplyr::filter(Date >= start & Date <= end) %>%
+    dplyr::select(Date, rain_sum) %>% 
+    collect()
+  
+  return(z)
+}  # end function rain.36to50.dap
+
+# Example of use:
+# rain.36to50.dap(i = 5)
+```
+
+
+
+```{r calculate-the-wvars}
+# Calculate the rain variables:
+# rain = sum of rain from planting.date to 35 dap (mm); and from 36 to 50 dap
+tic()
+foo1 <-
+  map(1:nrow(env_wm), function(j) {
+    rain.to.35dap(j) %>% 
+    # rain in mm
+    dplyr::summarise(rainto35dap = sum(rain_sum))}) %>% 
+  bind_rows()
+toc()  # ~10 sec
+
+foo2 <-
+  map(1:nrow(env_wm), function(j) {
+    rain.36to50.dap(j) %>% 
+    # rain in mm
+    dplyr::summarise(rain36to50dap = sum(rain_sum))}) %>% 
+  bind_rows()
+
+# You would expect foo1 to have higher values because of the summary being over a longer time (35 days vs 14 days for foo2); and indeed that is the case:
+summary(foo1)
+summary(foo2)
+
+
+rain_vars <- 
+  dplyr::bind_cols(env_wm, foo1, foo2) %>% 
+  dplyr::select(subject, starts_with("rain"))
+```
+
+
+```{r save-the-data}
+save(rain_vars, file = here::here("Openmeteo", "rain_vars.RData"))
+```
+
+
+```{r database-disconnect}
+# Disconnect when done:
+DBI::dbDisconnect(condaily)
+```
+

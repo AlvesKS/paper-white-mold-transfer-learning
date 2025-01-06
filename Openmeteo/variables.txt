@@ -1,0 +1,30 @@
+HOURLY WEATHER VARIABLES
+Temperature (2 m) = temperature_2m
+Dewpoint (2 m) = dew_point_2m
+
+Sealevel Pressure = pressure_msl = Atmospheric air pressure reduced to mean sea level (msl) 
+
+Relative Humidity (2 m) = relative_humidity_2m
+Vapour Pressure Deficit = vapour_pressure_deficit = Vapor Pressure Deficit (VPD) in kilopascal (kPa). For high VPD (>1.6), water transpiration of plants increases. For low VPD (<0.4), transpiration decreases
+
+Cloud cover Total = cloud_cover = Total cloud cover as an area fraction
+Cloud cover Low = cloud_cover_low = Low level clouds and fog up to 2 km altitude (THINKING: that may protect spores, help with survival. Fog associated with moisture)
+
+Soil Temperature (0-7 cm) = soil_temperature_0_to_7cm = Average temperature 0-7 cm below ground.
+Soil Moisture (0-7 cm) = soil_moisture_0_to_7cm = Average soil water content as volumetric mixing ratio at 0-7 cm depth.
+
+Wind Speed (10 m) = wind_speed_10m = Wind speed at 10 meters above ground. Wind speed on 10 meters is the standard level. (THINKING: that higher wind speeds are going to disperse spores but also prevent passive deposition onto spikes; would calculate the average wind speed per day)
+
+
+DAILY WEATHER VARIABLES
+Maximum Temperature (2 m) = temperature_2m_max
+Minimum Temperature (2 m) = temperature_2m_min
+Mean Temperature (2 m) = temperature_2m_mean
+
+Sunshine Duration = sunshine_duration = The number of seconds of sunshine per day is determined by calculating direct normalized irradiance exceeding 120 W/m², following the WMO definition. (THINKING: that higher levels of sunshine will be associated with spore decay and degradation)
+Shortwave Radiation Sum = shortwave_radiation_sum = The sum of solar radiation on a given day in Megajoules
+
+Rain Sum = rain_sum = Sum of daily rain (thinking this will be more useful than hourly rain because of variability; rain variables have to be properly summarized [see Adrian Correndo materials] to be useful as a variable)
+Precipitation Hours = precipitation_hours = The number of hours with rain
+
+Dominant Wind Direction (10 m) = wind_direction_10m_dominant = Dominant wind direction (THINKING: that winds coming from the North are not likely to be carrying spores, hence low risk)
