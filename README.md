@@ -1,9 +1,3 @@
----
-title: "Snap bean white mold prediction"
-subtitle: "More or less chronological order of the analysis process"
-author: Denis Shah
----
-
 # More or less chronological order of the analysis process
 
 ## Data Folder
