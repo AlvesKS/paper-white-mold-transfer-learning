@@ -15,14 +15,12 @@ output:
       chunk_output_type: console
 ---
 
-
 ```{r setup, include=FALSE, eval=TRUE}
 options(digits = 3)
 require(knitr)
 ## options
 knitr::opts_chunk$set(eval = TRUE, echo = FALSE, cache = FALSE, warning = FALSE, message = FALSE)
 ```
-
 
 ```{r Libraries, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE}
 library(fda)
@@ -32,7 +30,6 @@ library(tidyverse)
 library(tictoc)
 library(kableExtra)
 ```
-
 
 ```{r Load-and-process-the-data}
 wm_load <- readr::read_csv(here::here("Data", "data_model_plus_weather_filtered.csv"), show_col_types = FALSE)
@@ -86,7 +83,6 @@ wm_data <-
   dplyr::mutate(wm = as.numeric(wm)-1) %>%
   dplyr::mutate(wm = 2*wm-1) 
 ```
-
 
 ```{r fos-functions}
 data.prep <- function(x) {
@@ -196,88 +192,87 @@ fANOVA <- function(dat) {
   }
 ```
 
-
 # Function-on-scalar regression {.tabset .tabset-fade .tabset-pills}
+
 ## Dew point
+
 ```{r function-on-scalar-d2m}
 fANOVA(dat = data.prep(d2m))
 ```
 
-
 ## Mean air temperature
+
 ```{r function-on-scalar-t2m-mean}
 fANOVA(dat = data.prep(t2m_mean))
 ```
 
-
 ## Max air temperature
+
 ```{r function-on-scalar-t2m-max}
 fANOVA(dat = data.prep(t2m_max))
 ```
 
-
 ## Min air temperature
+
 ```{r function-on-scalar-t2m-min}
 fANOVA(dat = data.prep(t2m_min))
 ```
 
-
 ## Max - Min air temperature
+
 ```{r function-on-scalar-tdiff}
 fANOVA(dat = data.prep(tdiff))
 ```
 
-
 ## Temperature-Dewpoint depression
+
 ```{r function-on-scalar-dpd}
 fANOVA(dat = data.prep(dpd))
 ```
 
-
 ## Soil temperature
+
 ```{r function-on-scalar-st}
 fANOVA(dat = data.prep(st))
 ```
 
-
 ## Soil moisture
+
 ```{r function-on-scalar-sm}
 fANOVA(dat = data.prep(sm))
 ```
 
-
 ## soil temperature:soil moisture ratio
+
 ```{r function-on-scalar-stsm}
 fANOVA(dat = data.prep(stsm))
 ```
 
-
 ## Surface pressure
+
 ```{r function-on-scalar-sp}
 fANOVA(dat = data.prep(sp))
 ```
 
-
 ## Relative humidity
+
 ```{r function-on-scalar-rh}
 fANOVA(dat = data.prep(rh))
 ```
 
-
 ## VPD
+
 ```{r function-on-scalar-vpd}
 fANOVA(dat = data.prep(vpd))
 ```
 
-
 ## Growing degree days
+
 ```{r function-on-scalar-gdd}
 fANOVA(dat = data.prep(gdd))
 ```
 
-
--------------------------------------------------------------------------------
-
+------------------------------------------------------------------------
 
 <!-- NEW SECTION: interval-wide tests -->
 
@@ -329,7 +324,6 @@ seq(-30, 50)[31:32]
 # NEXT:
 # Take the above code, and wrap into functions to (i) prep the data for input into fdatest, (ii) calling the fdatest functions to estimate the adjusted p values
 ```
-
 
 ```{r fdatest-functions}
 make_kable <- function(...) {
@@ -449,12 +443,15 @@ zee <- function(series) {
 ```
 
 <!-- Already did the interval-wise tests. Just load the results. -->
+
 ```{r load-the-iwt-results}
 load(here::here("FunctionalDataAnalysis", "FunctiononScalar", "iwt.RData"))
 ```
 
 # Interval-wise tests {.tabset .tabset-fade .tabset-pills}
+
 Perform the interval-wise tests
+
 ```{r do-interval-wise-tests, eval=FALSE}
 tst.d2m <- do.fdatest(x = d2m)
 
@@ -483,89 +480,98 @@ tst.vpd <- do.fdatest(x = vpd)
 tst.gdd <- do.fdatest(x = gdd)
 ```
 
-
-
 I've already done the interval-wise tests, so the chunks in this section will just output the days that the test found to be significant.
 
 ## Dew point
+
 ```{r iwt-d2m}
 zee("d2m") %>% 
   make_kable()
 ```
 
 ## Mean air temperature
+
 ```{r iwt-t2m-mean}
 zee("t2m_mean") %>% 
   make_kable()
 ```
 
 ## Max air temperature
+
 ```{r iwt-t2m-max}
 zee("t2m_max") %>% 
   make_kable()
 ```
 
 ## Min air temperature
+
 ```{r iwt-t2m-min}
 zee("t2m_min") %>% 
   make_kable()
 ```
 
 ## Max - Min air temperature
+
 ```{r iwt-tdiff}
 zee("tdiff") %>% 
   make_kable()
 ```
 
 ## Temperature-Dewpoint depression
+
 ```{r iwt-dpd}
 zee("dpd") %>% 
   make_kable()
 ```
 
 ## Soil temperature
+
 ```{r iwt-st}
 zee("st") %>% 
   make_kable()
 ```
 
 ## Soil moisture
+
 ```{r iwt-sm}
 zee("sm") %>% 
   make_kable()
 ```
 
 ## soil temperature:soil moisture ratio
+
 ```{r iwt-stsm}
 zee("stsm") %>% 
   make_kable()
 ```
 
 ## Surface pressure
+
 ```{r iwt-sp}
 zee("sp") %>% 
   make_kable()
 ```
 
 ## Relative humidity
+
 ```{r iwt-rh}
 zee("rh") %>% 
   make_kable()
 ```
 
-
 ## VPD
+
 ```{r iwt-vpd}
 zee("vpd") %>% 
   make_kable()
 ```
 
 <!-- ## Growing degree days -->
+
 ```{r iwt-gdd, eval=FALSE, echo=FALSE}
 zee("gdd") %>% 
   make_kable()
 ```
-
 
 ```{r save-the-results, eval=FALSE}
 # I want to put all the data frames into a list (to pass to bind_rows). Found the solution at:
@@ -583,8 +589,8 @@ iwt <- dplyr::bind_rows(iwt.list)
 save(iwt.list, iwt, file = here::here("FunctionalDataAnalysis", "FunctiononScalar", "iwt.RData"))
 ```
 
-
 # Summary of the test results
+
 ```{r parsing-the-results, results='hide'}
 # Let's use the filter.iwt function to have a look at the intervals that were significant (all series, ignoring gdd):
 # air temperature-related
@@ -625,7 +631,6 @@ e <- c("t2m_mean", "t2m_max", "t2m_min", "tdiff", "d2m", "dpd", "sm", "st", "sts
 g <- purrr::map(e, zee) |> list_rbind()
 ```
 
-
 ```{r plot-the-results}
 # Code for plotting the segments derived from here:
 # https://stackoverflow.com/questions/35322919/grouped-data-by-factor-with-geom-segment
@@ -663,8 +668,8 @@ g %>%
     theme(axis.title = element_text(face = "bold", size = 11))
 ```
 
-
 <!-- # Summary variables -->
+
 ```{r summary-variables, eval=FALSE}
 weather_vars <- function(whichvar, start, end) {
   # Calculate the weather-based summary variable for each observation
@@ -708,8 +713,8 @@ weather.vars <- purrr::reduce(list(u, v, w, x, y, z), dplyr::left_join, by = "su
 save(weather.vars, file = "WeatherVars.RData")
 ```
 
-
-
 <!-- #  Further... -->
+
 <!-- One issue that is of concern is the small nature of the dataset.  However, if we could generate artificial datasets, those could be used for model training. -->
+
 <!-- [See this R package on GANs](https://github.com/mneunhoe/RGAN)  -->

@@ -1,0 +1,959 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Counties with Demographics, New York State, 2000 (FGDC metadata)</title>
+<style type="text/css">
+      a, a:visited { color:#287d37 ; font-weight:bold }
+      body { font-family: "Lato", sans-serif }
+      div { margin:0 ; padding:0 0 0 2em ; text-indent:-2em }
+      em { font-weight:bold ; font-style:italic ; color:#6c757d }
+      h1 { font-size:150% }
+      h2 { font-size:125% }
+      hr { margin:1em 0 ; clear:both }
+      img.logo { float:right ; margin-right:1em }
+      img.browse { float:right ; margin:1em ; padding:0 ; border:1px solid #888 ; box-shadow:2px 2px 4px #888 }
+      img.browse:hover { box-shadow:2px 2px 12px #888 }
+      pre { font-family:inherit ; margin:0 ; text-indent:0 }
+      table { text-indent:0 ; margin:4px 2em ; border-collapse:collapse ; border:1px solid #ccc }
+      tr:hover > td { background:#f8f8f8 }
+      td tr:hover > td { background:#f0f0f0 }
+      th { color:#6c757d ; border:1px solid #ccc ; padding:4px 1em ; font-style:italic ; font-weight:bold }
+      td { vertical-align:top ; border:1px solid #ccc ; padding:4px 1em }
+      button.toggle { color:#fff ; background:#006080 ; border:none ; border-radius:8px ; padding:2px 0.5em ; margin-left:1em }
+      button.toggle:hover { cursor:pointer }
+      .enum td, .enum th { border:none ! important }
+    </style>
+<script>
+      function toggle(x) {
+        var y = x.nextElementSibling;
+        if (y.style.display === 'none') {
+          y.style.display = 'block';
+        }
+        else {
+          y.style.display = 'none';
+        }
+      }
+    </script>
+</head>
+<body>
+<a href="https://cugir.library.cornell.edu/"><img class="logo" width="275" height="100" alt="CUGIR: Cornell University Geospatial Data Repository" src="data:image/png;base64,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"></a><h1>Counties with Demographics, New York State, 2000</h1>
+<p>This is a human-readable view of the <a href="https://cugir-data.s3.amazonaws.com/00/78/65/fgdc.xml"> FGDC XML metadata</a>.</p>
+<ul>
+<li><a href="#idinfo">Identification_Information</a></li>
+<li><a href="#dataqual">Data_Quality_Information</a></li>
+<li><a href="#spdoinfo">Spatial_Data_Organization_Information</a></li>
+<li><a href="#spref">Spatial_Reference_Information</a></li>
+<li><a href="#eainfo">Entity_and_Attribute_Information</a></li>
+<li><a href="#distinfo">Distribution_Information</a></li>
+<li><a href="#metainfo">Metadata_Reference_Information</a></li>
+</ul>
+  <a name="idinfo"></a><hr>
+<a href="https://cugir.library.cornell.edu/catalog/cugir-007865" alt="dynamic map"><img class="browse" src="https://cugir-data.s3.amazonaws.com/00/78/65/preview.png" alt="static map preview"></a><h2>Identification_Information</h2>
+<div>
+    <div>
+<em>Citation: </em>
+      <div>
+<em>Citation_Information: </em>
+        <div>
+<em>Originator: </em>U.S. Census Bureau</div>
+        <div>
+<em>Publication_Date: </em>2000</div>
+        <div>
+<em>Title: </em>Counties with Demographics, New York State, 2000</div>
+        <div>
+<em>Geospatial_Data_Presentation_Form: </em>vector digital data</div>
+        <div>
+<em>Online_Linkage: </em><a href="https://cugir.library.cornell.edu/catalog/cugir-007865">https://cugir.library.cornell.edu/catalog/cugir-007865</a>
+</div>
+      </div>
+    </div>
+    <div>
+<em>Description: </em>
+      <div>
+<em>Abstract: </em>This dataset presents boundaries and basic demographic
+        data from the 2000 Census for each county and county-equivalent area in New York state.</div>
+      <div>
+<em>Purpose: </em>For county-scale geographic and demographic analysis.</div>
+    </div>
+    <div>
+<em>Time_Period_of_Content: </em>
+      <div>
+<em>Time_Period_Information: </em>
+        <div>
+<em>Single_Date/Time: </em>
+          <div>
+<em>Calendar_Date: </em>2000</div>
+        </div>
+      </div>
+      <div>
+<em>Currentness_Reference: </em>ground condition</div>
+    </div>
+    <div>
+<em>Status: </em>
+      <div>
+<em>Progress: </em>Complete</div>
+      <div>
+<em>Maintenance_and_Update_Frequency: </em>None planned</div>
+    </div>
+    <div>
+<em>Spatial_Domain: </em>
+          <div>
+<em>Bounding_Coordinates: </em>
+            <div>
+<em>West_Bounding_Coordinate: </em>-79.762152</div>
+            <div>
+<em>East_Bounding_Coordinate: </em>-71.856214</div>
+            <div>
+<em>North_Bounding_Coordinate: </em>45.01585</div>
+            <div>
+<em>South_Bounding_Coordinate: </em>40.496103</div>
+          </div>
+        </div>
+    <div>
+<em>Keywords: </em>
+      <div>
+<em>Theme: </em>
+        <div>
+<em>Theme_Keyword_Thesaurus: </em>None</div>
+        <div>
+<em>Theme_Keyword: </em>County Boundaries</div>
+        <div>
+<em>Theme_Keyword: </em>Counties</div>
+        <div>
+<em>Theme_Keyword: </em>demographic data</div>
+        <div>
+<em>Theme_Keyword: </em>Census</div>
+      </div>
+      <div>
+<em>Theme: </em>
+        <div>
+<em>Theme_Keyword_Thesaurus: </em>ISO 19115 Topic Category</div>
+        <div>
+<em>Theme_Keyword: </em>society</div>
+        <div>
+<em>Theme_Keyword: </em>boundaries</div>
+      </div>
+      <div>
+<em>Theme: </em>
+              <div>
+<em>Theme_Keyword_Thesaurus: </em>CUGIR Category</div>
+              <div>
+<em>Theme_Keyword: </em>society</div>
+<div>
+<em>Theme_Keyword: </em>boundaries</div>
+            </div>
+      <div>
+<em>Place: </em>
+        <div>
+<em>Place_Keyword_Thesaurus: </em>LCSH</div>
+        <div>
+<em>Place_Keyword: </em>New York (State)</div>
+      </div>
+    </div>
+    <div>
+<em>Access_Constraints: </em>None</div>
+    <div>
+<em>Use_Constraints: </em>None. By law, Title 17 U.S.C., Section 105, copyright protection
+      is not available for any work of the United States Government. Thus, the
+      Government is precluded from copyrighting its publications. Consequently,
+      you are free to reproduce census materials as you see fit. The U.S. Census
+      Bureau asks, however, that in using this data you cite the Census Bureau
+      as the source.</div>
+    <div>
+<em>Browse_Graphic: </em>
+              <div>
+<em>Browse_Graphic_File_Name: </em><a href="https://cugir-data.s3.amazonaws.com/00/78/65/preview.png">https://cugir-data.s3.amazonaws.com/00/78/65/preview.png</a>
+</div>
+              <div>
+<em>Browse_Graphic_File_Description: </em>preview of the dataset</div>
+              <div>
+<em>Browse_Graphic_File_Type: </em>PNG</div>
+            </div>
+  </div>
+  <a name="dataqual"></a><hr>
+<h2>Data_Quality_Information</h2>
+<div>
+    <div>
+<em>Logical_Consistency_Report: </em>The demographic attribute information for each county has not been
+      fully tested for logical consistency.</div>
+    <div>
+<em>Completeness_Report: </em>Demographic attribute values are fully present for every county.</div>
+    <div>
+<em>Positional_Accuracy: </em>
+      <div>
+<em>Horizontal_Positional_Accuracy: </em>
+        <div>
+<em>Horizontal_Positional_Accuracy_Report: </em>The cartographic boundary files are primarily designed for
+          small scale, thematic mapping applications at a target scale range of
+          1:500,000 to 1:5,000,000. The cartographic boundary files are a
+          generalized extract from the U.S. Census Bureau's TIGER database. Line
+          simplification/smoothing was performed with a tolerance of 0.005
+          decimal degrees and a coordinate reduction using the Douglas-Peucker
+          method with a tolerance of 0.0003 decimal degrees. Very small polygons
+          were eliminated when the combination of geographic codes existed
+          elsewhere. The geography was clipped back to the shoreline of the
+          United States, in contrast to TIGER/Line which shows the full extent
+          of geography out to the 3-mile limit. Because of coordinate thinning:
+          1. Cartographic boundary files should not be used for geocoding; 2.
+          Some offshore, redundant, zero population and housing land areas may
+          be absent from the files; 3. Cartographic Boundary files are not
+          necessarily vertically integrated with previous boundary file sets.
+        </div>
+      </div>
+    </div>
+    <div>
+<em>Lineage: </em>
+      <div>
+<em>Process_Step: </em>
+        <div>
+<em>Process_Description: </em>The original shapefile of year 2000 county boundaries was
+          obtained from the U.S. Census Bureau "Cartographic Boundary Files"
+          download page
+          &lt;<a href="http://www.census.gov/geo/www/cob/bdy_files.html">http://www.census.gov/geo/www/cob/bdy_files.html</a>&gt;, and
+          projected to UTM zone 18N (NAD 1983). Attribute data from the 2000
+          Census was downloaded from American FactFinder
+          &lt;<a href="http://factfinder.census.gov/">http://factfinder.census.gov/</a>&gt; and joined to the
+          shapefile attribute table.</div>
+        <div>
+<em>Process_Date: </em>200409</div>
+      </div>
+    </div>
+  </div>
+  <a name="spdoinfo"></a><hr>
+<h2>Spatial_Data_Organization_Information</h2>
+<div>
+        <div>
+<em>Direct_Spatial_Reference_Method: </em>Vector</div>
+        <div>
+<em>Point_and_Vector_Object_Information: </em>
+          <div>
+<em>SDTS_Terms_Description: </em>
+            <div>
+<em>SDTS_Point_and_Vector_Object_Type: </em>Polygon</div>
+            <div>
+<em>Point_and_Vector_Object_Count: </em>67</div>
+          </div>
+        </div>
+      </div>
+  <a name="spref"></a><hr>
+<h2>Spatial_Reference_Information</h2>
+<div>
+    <div>
+<em>Horizontal_Coordinate_System_Definition: </em>
+      <div>
+<em>Geographic: </em>
+        <div>
+<em>Latitude_Resolution: </em>0.000458</div>
+        <div>
+<em>Longitude_Resolution: </em>0.000458</div>
+        <div>
+<em>Geographic_Coordinate_Units: </em>Decimal degrees</div>
+      </div>
+      <div>
+<em>Geodetic_Model: </em>
+        <div>
+<em>Horizontal_Datum_Name: </em>North American Datum of 1983</div>
+        <div>
+<em>Ellipsoid_Name: </em>Geodetic Reference System 80</div>
+        <div>
+<em>Semi-major_Axis: </em>6378137.000000</div>
+        <div>
+<em>Denominator_of_Flattening_Ratio: </em>298.257222</div>
+      </div>
+    </div>
+  </div>
+  <a name="eainfo"></a><hr>
+<h2>Entity_and_Attribute_Information</h2>
+<div>
+    <div>
+<em>Entity_Type: </em>
+        <div>
+<em>Entity_Type_Label: </em>county</div>
+        <div><em>Entity_Type_Definition: </em></div>
+        <div><em>Entity_Type_Definition_Source: </em></div>
+      </div>
+<div><em>Attributes:</em></div>
+<table class="attributes">
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Values</th>
+</tr>
+<tr>
+<td>FID</td>
+<td>Internal feature number.</td>
+<td>Sequential unique whole numbers that are automatically
+            generated.</td>
+</tr>
+<tr>
+<td>Shape</td>
+<td>Feature geometry.</td>
+<td>Coordinates defining the features.</td>
+</tr>
+<tr>
+<td>STATE</td>
+<td>FIPS State Numeric Code</td>
+<td>FIPS Numeric Codes for the States and the District of
+              Columbia<br>FIPS PUB 5-2</td>
+</tr>
+<tr>
+<td>COUNTY</td>
+<td>FIPS County Code</td>
+<td>FIPS Codes for Counties and Equivalent Entities of the
+              United States, Its Possessions, and Associated Areas.<br>FIPS PUB 6-4</td>
+</tr>
+<tr>
+<td>NAME</td>
+<td>County name</td>
+<td>Text string.</td>
+</tr>
+<tr>
+<td>LSAD</td>
+<td>The legal/statistical area description<button class="toggle" onclick="toggle(this);">Show/Hide coded values</button><div class="enum" style="display:none"><table>
+<tr>
+<th>Code</th>
+<th>Definition</th>
+</tr>
+<tr>
+<td>06</td>
+<td>The legal/statistical description for "county"</td>
+</tr>
+</table></div>
+</td>
+<td>coded values</td>
+</tr>
+<tr>
+<td>LSAD_TRANS</td>
+<td>The legal/statistical area description translation</td>
+<td>Single value, "County"</td>
+</tr>
+<tr>
+<td>OID_</td>
+<td>Object ID</td>
+<td>Sequential unique whole numbers that are automatically
+            generated.</td>
+</tr>
+<tr>
+<td>COUNTY_FIP</td>
+<td>FIPS County Code</td>
+<td>FIPS Codes for Counties and Equivalent Entities of the
+              United States, Its Possessions, and Associated Areas.<br>FIPS PUB 6-4</td>
+</tr>
+<tr>
+<td>POP2000</td>
+<td>Total population from 2000 census</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>WHITE</td>
+<td>White alone</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>BLACK</td>
+<td>Black or African American alone</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>AMER_ES</td>
+<td>American Indian and Alaska Native alone</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>ASIAN</td>
+<td>Asian alone</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>HAWN_PI</td>
+<td>Native Hawaiian and Other Pacific Islander alone</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>OTHER</td>
+<td>Some other race alone</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>MULT_RACE</td>
+<td>Two or more races</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>HISPANIC</td>
+<td>Hispanic or Latino</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>MALE</td>
+<td>Total male</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>FEMALE</td>
+<td>Total female</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M_UNDER5</td>
+<td>Males under 5</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M5_9</td>
+<td>Males 5-9 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M10_14</td>
+<td>Males 10-14</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M15_17</td>
+<td>Males 15-17 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M18_19</td>
+<td>Males 18-19 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M20</td>
+<td>Males 20 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M21</td>
+<td>Males 21 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M22_24</td>
+<td>Males 22-24 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M25_29</td>
+<td>Males 25-29 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M30_34</td>
+<td>Males 30-34 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M35_39</td>
+<td>Males 35-39 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M40_44</td>
+<td>Males 40-44 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M45_49</td>
+<td>Males 45-49 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M50_54</td>
+<td>Males 50-54 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M55_59</td>
+<td>Males 55-59 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M60_61</td>
+<td>Males 60-61 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M62_64</td>
+<td>Males 62-64 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M65_66</td>
+<td>Males 65-66 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M67_69</td>
+<td>Males 67-69 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M70_74</td>
+<td>Males 70-74 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M75_79</td>
+<td>Males 75-79 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M80_84</td>
+<td>Males 80-84 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>M_OVER85</td>
+<td>Males over 85 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F_UNDER5</td>
+<td>Females under 5 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F5_9</td>
+<td>Females 5-9 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F10_14</td>
+<td>Females 10-14 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F15_17</td>
+<td>Females 15-17 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F18_19</td>
+<td>Females 18-19 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F20</td>
+<td>Females 20 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F21</td>
+<td>Females 21 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F22_24</td>
+<td>Females 22-24 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F25_29</td>
+<td>Females 25-29 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F30_34</td>
+<td>Females 30-34 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F35_39</td>
+<td>Females 35-39 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F40_44</td>
+<td>Females 40-44 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F45_49</td>
+<td>Females 45-49 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F50_54</td>
+<td>Females 50-54 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F55_59</td>
+<td>Females 55-59 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F60_61</td>
+<td>Females 60-61 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F62_64</td>
+<td>Females 62-64 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F65_66</td>
+<td>Females 65-66 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F67_69</td>
+<td>Females 67-69 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F70_74</td>
+<td>Females 70-74 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F75_79</td>
+<td>Females 75-79 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F80_84</td>
+<td>Females 80-84 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>F_OVER85</td>
+<td>Females over 85 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>HOUSEHOLDS</td>
+<td>Total households</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>AV_HH_SIZE</td>
+<td>Average household size</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>HSEHLD_1M</td>
+<td>1-person household, male householder</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>HSEHLD_1F</td>
+<td>1-person household, female householder</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>MAR_MINORC</td>
+<td>Married-couple family, with own children under 18 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>MAR_NO_MC</td>
+<td>Married-couple family, no own children under 18 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>MHH_MINORC</td>
+<td>Male householder, no wife present, with own children under 18
+          years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>FHH_MINORC</td>
+<td>Female householder, no husband present, with own children under
+          18 years</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>FAMILIES</td>
+<td>Total families</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>AV_FAM_SZ</td>
+<td>Average family size</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>HSE_UNITS</td>
+<td>Total housing units</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>URBAN</td>
+<td>Urban housing units</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>RURAL</td>
+<td>Rural housing units</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>VACANT</td>
+<td>Vacant housing units</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>OWNER_OCC</td>
+<td>Owner-occupied housing units</td>
+<td>0 to Unbounded</td>
+</tr>
+<tr>
+<td>RENTER_OCC</td>
+<td>Renter-occupied housing units</td>
+<td>0 to Unbounded</td>
+</tr>
+</table>
+  </div>
+  <a name="distinfo"></a><hr>
+<h2>Distribution_Information</h2>
+<div>
+        <div>
+<em>Distributor: </em>
+          <div>
+<em>Contact_Information: </em>
+            <div>
+<em>Contact_Organization_Primary: </em>
+              <div>
+<em>Contact_Organization: </em>Albert R. Mann Library</div>
+            </div>
+            <div>
+<em>Contact_Address: </em>
+              <div>
+<em>Address_Type: </em>mailing and physical</div>
+              <div>
+<em>Address: </em>Cornell University</div>
+              <div>
+<em>City: </em>Ithaca</div>
+              <div>
+<em>State_or_Province: </em>New York</div>
+              <div>
+<em>Postal_Code: </em>14853</div>
+            </div>
+            <div>
+<em>Contact_Voice_Telephone: </em>607-255-5406</div>
+            <div>
+<em>Contact_Electronic_Mail_Address: </em><a href="mailto:mann-ref@cornell.edu">mann-ref@cornell.edu</a>
+</div>
+          </div>
+        </div>
+        <div>
+<em>Distribution_Liability: </em>Cornell University provides these geographic data "as is". Cornell
+          University makes no guarantee or warranty concerning the accuracy of
+          information contained in the geographic data. Cornell University further
+          makes no warranty either expressed or implied, regarding the condition of
+          the product or its fitness for any particular purpose. The burden for
+          determining fitness for use lies entirely with the user. Although these
+          files have been processed successfully on computers at Cornell University,
+          no warranty is made by Cornell University regarding the use of these data
+          on any other system, nor does the fact of distribution constitute or imply
+          any such warranty.</div>
+        <div>
+<em>Standard_Order_Process: </em>
+        <div>
+<em>Digital_Form: </em>
+            <div>
+<em>Digital_Transfer_Information: </em>
+              <div>
+<em>Format_Name: </em>Shapefile</div>
+              <div>
+<em>Format_Information_Content: </em>zipped shapefile</div>
+              <div>
+<em>File_Decompression_Technique: </em>zip</div>
+              <div>
+<em>Transfer_Size: </em>0.17</div>
+            </div>
+            <div>
+<em>Digital_Transfer_Option: </em>
+              <div>
+<em>Online_Option: </em>
+                <div>
+<em>Computer_Contact_Information: </em>
+                  <div>
+<em>Network_Address: </em>
+                    <div>
+<em>Network_Resource_Name: </em><a href="https://cugir-data.s3.amazonaws.com/00/78/65/cugir-007865.zip">https://cugir-data.s3.amazonaws.com/00/78/65/cugir-007865.zip</a>
+</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+<div>
+<em>Digital_Form: </em>
+            <div>
+<em>Digital_Transfer_Information: </em>
+              <div>
+<em>Format_Name: </em>metadata</div>
+              <div>
+<em>Format_Information_Content: </em>FGDC XML metadata</div>
+            </div>
+            <div>
+<em>Digital_Transfer_Option: </em>
+              <div>
+<em>Online_Option: </em>
+                <div>
+<em>Computer_Contact_Information: </em>
+                  <div>
+<em>Network_Address: </em>
+                    <div>
+<em>Network_Resource_Name: </em><a href="https://cugir-data.s3.amazonaws.com/00/78/65/fgdc.xml">https://cugir-data.s3.amazonaws.com/00/78/65/fgdc.xml</a>
+</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+<div>
+<em>Digital_Form: </em>
+            <div>
+<em>Digital_Transfer_Information: </em>
+              <div>
+<em>Format_Name: </em>HTML metadata</div>
+              <div>
+<em>Format_Information_Content: </em>FGDC HTML metadata</div>
+            </div>
+            <div>
+<em>Digital_Transfer_Option: </em>
+              <div>
+<em>Online_Option: </em>
+                <div>
+<em>Computer_Contact_Information: </em>
+                  <div>
+<em>Network_Address: </em>
+                    <div>
+<em>Network_Resource_Name: </em><a href="https://cugir-data.s3.amazonaws.com/00/78/65/fgdc.html">https://cugir-data.s3.amazonaws.com/00/78/65/fgdc.html</a>
+</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+<div>
+<em>Digital_Form: </em>
+                <div>
+<em>Digital_Transfer_Information: </em>
+                  <div>
+<em>Format_Name: </em>KML</div>
+                  <div>
+<em>Format_Information_Content: </em>generated KML, via WFS</div>
+                </div>
+                <div>
+<em>Digital_Transfer_Option: </em>
+                  <div>
+<em>Online_Option: </em>
+                    <div>
+<em>Computer_Contact_Information: </em>
+                      <div>
+<em>Network_Address: </em>
+                        <div>
+<em>Network_Resource_Name: </em><a href="https://cugir.library.cornell.edu/geoserver/cugir/wfs?version=1.0.0&amp;request=GetFeature&amp;typeName=cugir007865&amp;outputFormat=application%2Fvnd.google-earth.kml%2Bxml">https://cugir.library.cornell.edu/geoserver/cugir/wfs?version=1.0.0&amp;request=GetFeature&amp;typeName=cugir007865&amp;outputFormat=application%2Fvnd.google-earth.kml%2Bxml</a>
+</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+<div>
+<em>Digital_Form: </em>
+            <div>
+<em>Digital_Transfer_Information: </em>
+              <div>
+<em>Format_Name: </em>GeoJSON</div>
+              <div>
+<em>Format_Information_Content: </em>generated GeoJSON, via WFS</div>
+            </div>
+            <div>
+<em>Digital_Transfer_Option: </em>
+              <div>
+<em>Online_Option: </em>
+                <div>
+<em>Computer_Contact_Information: </em>
+                  <div>
+<em>Network_Address: </em>
+                    <div>
+<em>Network_Resource_Name: </em><a href="https://cugir.library.cornell.edu/geoserver/cugir/wfs?version=1.0.0&amp;request=GetFeature&amp;typeName=cugir007865&amp;outputFormat=application%2Fjson">https://cugir.library.cornell.edu/geoserver/cugir/wfs?version=1.0.0&amp;request=GetFeature&amp;typeName=cugir007865&amp;outputFormat=application%2Fjson</a>
+</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+<div>
+<em>Digital_Form: </em>
+            <div>
+<em>Digital_Transfer_Information: </em>
+              <div>
+<em>Format_Name: </em>OGC:WMS</div>
+              <div>
+<em>Format_Information_Content: </em>WMS, from GeoServer</div>
+            </div>
+            <div>
+<em>Digital_Transfer_Option: </em>
+              <div>
+<em>Online_Option: </em>
+                <div>
+<em>Computer_Contact_Information: </em>
+                  <div>
+<em>Network_Address: </em>
+                    <div>
+<em>Network_Resource_Name: </em><a href="https://cugir.library.cornell.edu/geoserver/cugir/wms?version=1.1.0&amp;request=GetMap&amp;layers=cugir007865&amp;bbox=-79.99933014,40.36051059,-71.61903586,45.15144241&amp;width=256&amp;height=146&amp;srs=EPSG:4326&amp;format=image/png">https://cugir.library.cornell.edu/geoserver/cugir/wms?version=1.1.0&amp;request=GetMap&amp;layers=cugir007865&amp;bbox=-79.99933014,40.36051059,-71.61903586,45.15144241&amp;width=256&amp;height=146&amp;srs=EPSG:4326&amp;format=image/png</a>
+</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+<div>
+<em>Fees: </em>None</div>
+</div>
+      </div>
+  <a name="metainfo"></a><hr>
+<h2>Metadata_Reference_Information</h2>
+<div>
+      <div>
+<em>Metadata_Date: </em>20210715</div>
+      <div>
+<em>Metadata_Contact: </em>
+        <div>
+<em>Contact_Information: </em>
+          <div>
+<em>Contact_Organization_Primary: </em>
+            <div>
+<em>Contact_Organization: </em>Albert R. Mann Library</div>
+          </div>
+          <div>
+<em>Contact_Address: </em>
+            <div>
+<em>Address_Type: </em>mailing and physical</div>
+            <div>
+<em>Address: </em>Albert R. Mann Library</div>
+            <div>
+<em>City: </em>Ithaca</div>
+            <div>
+<em>State_or_Province: </em>New York</div>
+            <div>
+<em>Postal_Code: </em>14853</div>
+            <div>
+<em>Country: </em>USA</div>
+          </div>
+          <div>
+<em>Contact_Voice_Telephone: </em>607-255-5406</div>
+          <div>
+<em>Contact_Electronic_Mail_Address: </em><a href="mailto:mann-ref@cornell.edu">mann-ref@cornell.edu</a>
+</div>
+        </div>
+      </div>
+      <div>
+<em>Metadata_Standard_Name: </em>FGDC Content Standard for Digital Geospatial Metadata</div>
+      <div>
+<em>Metadata_Standard_Version: </em>FGDC-STD-001-1998</div>
+      <div>
+<em>Metadata_Time_Convention: </em>local time</div>
+    </div>
+</body>
+</html>

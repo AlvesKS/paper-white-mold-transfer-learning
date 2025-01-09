@@ -1,0 +1,42 @@
+---
+title: "About this repository"
+---
+
+## General instructions
+
+This repository contains the codes used to obtain and analyze the data used in a research study. Read about the study [here](about.qmd).
+
+The analyses code were written using `R version 4.4.1` and scripted on [Quarto](https://quarto.org/){target="_blank"} (`.qmd`) documents. Follow instruction on the [Get Started page](https://quarto.org/docs/get-started/){target="_blank"} of the Quarto website to run the scripts included in this repository.
+
+::: {.callout-tip}
+## Reseach compendium
+The full research compendium with data and scripts used for this study is stored in an [Open Science Framework](https://osf.io/){target="_blank"} repository and can be accessed [here](https://osf.io/v53py/){target="_blank"}. Download the **FULL** repository and run the analysis in your machine.
+
+:::
+
+::: {.callout-warning}
+
+# About the Data
+
+In the research repository, the directories containing the soil, weather, white mold can be downloaded using the folowing links([`data_era5.zip`](https://osf.io/download/k39bd/),[`soil_images.zip`](https://osf.io/download/2jfcz/), [`data_white-mold.zip`](https://osf.io/download/ehy26/)). You should unzip these files in the main directory to be able to reproduce the analysis.
+
+:::
+
+
+# Meta
+
+## Licensing
+
+**Code**: MIT year: 2022, copyright holder: Kaique S. Alves
+
+## Repository maintainer
+
+**Kaique S. Alves**
+
+-   *Plant Health Scientist within the Global Plant Health team of Breeding - Bayer Crop sciecce*
+
+-   *D.Sc in the [Plant Pathology graduate program](http://www.dfp.ufv.br/graduate/about-the-program/){target="_blank"} from Universidade Federal de Viçosa in Brazil.*
+
+-   *Visiting Scholar in the [EVADE program](https://blogs.cornell.edu/pethybridgelab/){target="_blank"} of the Plant Pathology & Plant-Microbe Biology Section, School of Integrative Plant Science, Cornell University.*
+
+[**Personal website**](https://kaiquealves.netlify.app/){target="_blank"} \| [**GitHub**](https://github.com/AlvesKS){target="_blank"} \| [**Google Scholar**](https://scholar.google.com.br/citations?user=wTzslqsAAAAJ&hl){target="_blank"}

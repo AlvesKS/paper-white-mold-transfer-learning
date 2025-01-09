@@ -49,10 +49,10 @@ StatTf <- ggproto("StatTf", Stat,
   compute_layer = function(self, data, params, layout) {
     stopifnot(is_tf(pull(data, tf)))
     tf_eval <- suppressMessages(
-      mutate(data, tf____id = names(tf) %||% seq_along(tf)) %>% 
-      tf_unnest(tf, .arg = params$arg, names_sep = "____")) %>%
-      select(-group) %>%
-      rename(group = tf____id, x = tf____arg, y = tf____value)
+      dplyr::mutate(data, tf____id = names(tf) %||% seq_along(tf)) %>% 
+      tidyfun::tf_unnest(tf, .arg = params$arg, names_sep = "____")) %>%
+      dplyr::select(-group) %>%
+      dplyr::rename(group = tf____id, x = tf____arg, y = tf____value)
     tf_eval
   },
   # need this so arg, spaghetti gets recognized as valid parameters

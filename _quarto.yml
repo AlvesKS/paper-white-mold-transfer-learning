@@ -1,0 +1,88 @@
+project:
+  type: website
+  output-dir: docs
+  execute-dir: project
+  render:
+    - about.qmd
+    - index.qmd
+    - code_weather_white-mold.qmd
+    - code_soil_variables_white-mold.qmd
+    - code_canopy_closure_estimation.qmd
+    - code_data_fusion.qmd
+    - code_fda_exploratory.qmd
+    - code_function_on_scalar.qmd
+    - code_modeling.qmd
+    - "!data_era5/"
+    - "!data_white-mold/"
+    - "!figs/"
+    - "!functions/"
+    - "!shape_files/"
+    - "!soil_images/"
+    - "!xgboost/"
+    - "!README.md"
+    - "!LICENSE"
+    - "!quarto/"
+    - "!*.ini"
+
+
+    
+# editor: visual
+
+website:
+  title: "Data & Codes"
+  page-navigation: true
+  #opengraph: true
+  open-graph: true
+  repo-url: https://github.com/AlvesKS/paper-white-mold-transfer-learning
+  repo-actions: [edit, issue]
+  search: 
+    location: navbar
+    type: textbox  
+  sidebar:
+    style: "floating"
+    search: true
+    contents: 
+      - section: Repository
+        contents: 
+        - index.qmd
+        - about.qmd
+      - section: Data sources
+        contents:
+          - code_weather_white-mold.qmd
+          - code_soil_variables_white-mold.qmd
+          - code_canopy_closure_estimation.qmd
+          - code_data_fusion.qmd
+      - section: Functional data analysis
+        contents:
+          - code_fda_exploratory.qmd
+          - code_function_on_scalar.qmd
+      - section: Data analysis
+        contents: 
+          - code_modeling.qmd
+          
+          
+    tools:
+      - icon: linkedin
+        href: https://twitter.com/AlvesKS_
+      - icon: github
+        href: https://github.com/AlvesKS/paper_ML_whitemold
+      - icon: download
+        href: https://osf.io/v53py/
+  page-footer: "Copyright © 2024 Kaique S. Alves" 
+    
+      
+format:
+  html:
+    self-contained: true
+    # theme: cosmo
+    css: styles.css
+    toc: true
+    smooth-scroll: true
+    
+execute:
+  cache: false
+
+
+theme:
+  light: flatly
+  dark: darkly

@@ -1,0 +1,540 @@
+---
+title: "Safer and Smarter: Leveraging Transfer Learning and Data Fusion of Disease and Environmental Data for Modeling Plant Disease Risk"
+subtitle: "Supplementary Appendices, Figures and Tables"
+author:
+  - Kaique S. Alves^[Plant Pathology and Plant-Microbe Biology Section, School of Integrative Plant Science, Cornell AgriTech, Cornell University, Geneva, NY 14456, U.S.A.; Departamento de Fitopatologia, Universidade Federal de Viçosa, Viçosa, MG 36570-900, Brazil]
+  - Denis A. Shah^[Department of Plant Pathology, Kansas State University, Manhattan, KS 66506, U.S.A.]
+  - Helene R. Dillard^[College of Agricultural and Environmental Sciences, University of California, Davis, CA 95616, U.S.A.]
+  - Emerson M. Del Ponte^[Departamento de Fitopatologia, Universidade Federal de Viçosa, Viçosa, MG 36570-900, Brazil]
+  - Sarah J. Pethybridge^[Plant Pathology and Plant-Microbe Biology Section, School of Integrative Plant Science, Cornell AgriTech, Cornell University, Geneva, NY 14456, U.S.A.]
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+# The header-includes has to be here to generate the Table of Contents:
+# header-includes is used to bold the Table captions and left justify it:
+# https://stackoverflow.com/questions/54931062/can-you-left-justify-or-bold-the-table-figure-caption-for-kable-in-rmarkdown
+header-includes:
+  - \usepackage[justification=raggedright,labelfont=bf,singlelinecheck=false]{caption}
+  - \renewcommand{\thefigure}{S\arabic{figure}}
+  - \renewcommand{\thetable}{S\arabic{table}}
+  - \pagenumbering{gobble}
+output: 
+  pdf_document: 
+    toc: no
+    number_sections: no
+    fig_caption: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+options(tigris_use_cache = TRUE)
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, eval = TRUE, echo = FALSE, cache = TRUE)
+```
+
+\newpage
+
+# Figures
+
+<!-- Supplementary Figure S1 -->
+
+```{r Figure-S1, fig.cap='Kernel density estimates of days after planting for each observed phenological stage in surveyed snap bean fields in central and western New York State. Pre-bloom = plants in the vegetative stages; Bloom = at least 50% of plants have at least one open blossom; Pod = developing (immature) pods; Harvest = most pods are mature, and the field is harvestable. Points represent the median of the distribution while error bars represent the 95% percentile intervals.'}
+
+library(tidyverse)
+library(cowplot)
+library(ggthemes)
+library(ggdist)
+
+
+wm_load <- read.csv(here::here("Data", "data_model_plus_weather_filtered.csv"))
+
+wm_datax <- wm_load %>%
+  # transform these columns into Date format
+  dplyr::mutate(date = as.Date(date),
+                sampling.date =  as.Date(sampling.date),
+                planting.date = as.Date(planting.date)) %>% 
+  
+  # Calculate dap
+  dplyr::mutate(dap = date - planting.date) %>% 
+  
+  dplyr::group_by(subject) %>% 
+  dplyr::mutate(wm = (mean(wm, na.rm = T) > 0)*1) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::filter(!is.na(wm)) 
+
+  
+wm_datax %>% 
+  dplyr::filter(!is.na(gscat)) %>% 
+  dplyr::group_by(subject, gscat) %>% 
+  dplyr::summarise(dap = max(dap), .groups = "drop") %>% 
+  dplyr::mutate(gscat = factor(gscat, levels = c( "Harvest" , "Pod", "Bloom" , "Pre-bloom"))) %>% 
+  ggplot(aes(dap, reorder(gscat, dap), fill= gscat)) +
+  ggdist::stat_slab() +
+  ggdist::stat_pointinterval(.width = c(0.95),
+                             point_size = 2,
+                             interval_size = 1, show.legend = FALSE) +
+  ggthemes::scale_fill_calc() +
+  cowplot::background_grid(size.major = 0.1) +
+  scale_x_continuous(breaks = seq(15, 80, 5)) +
+  labs(x =  "Days after planting",
+       y = "Phenological state",
+       fill = "")
+```
+
+\newpage
+
+<!-- Supplementary Figure S2 -->
+
+```{r Figure-S2, fig.cap='Locations of surveyed snap bean fields (blue dots) and ground weather stations (red stars) in central and western New York State reporting during 2006 to 2008.'}
+
+library(tidyverse)
+library(sf)
+library(tigris)
+
+# The observational matrix:
+load(here::here("Data", "Survey.RData"))  # df
+
+# Data frame of the fields and their locations:
+surv <-
+  df %>% 
+  # Filter out the PA fields (Potter county):
+  dplyr::filter(! county == "Potter") %>% 
+  dplyr::select(subject, latitude, longitude, sampling.date, wm) %>% 
+  dplyr::filter(!is.na(latitude), !is.na(longitude)) %>% 
+  dplyr::arrange(subject, sampling.date) %>% 
+  dplyr::group_by(subject) %>%
+  # The last sampling date for each field:
+  dplyr::slice_max(sampling.date, n = 1, with_ties = FALSE) %>%
+  dplyr::ungroup() %>% 
+  dplyr::filter(!is.na(wm)) %>% 
+  dplyr::mutate(wm = ifelse(wm > 0, 1, 0)) %>% 
+  dplyr::select(subject, latitude, longitude)
+
+
+# Data frame of weather stations in NY. It is called st and the location columns are LAT and LON
+load(here::here("Maps", "NYStations.RData"))  # st
+
+
+# The counties in which the surveyed fields were located
+highlight_counties <-
+  df %>% 
+  # Filter out the PA fields (Potter county):
+  dplyr::filter(! county == "Potter") %>% 
+  dplyr::select(county) %>% 
+  dplyr::distinct() %>% 
+  dplyr::pull() %>% 
+  as.character()
+
+
+# Download New York state counties
+ny_counties <- counties(state = "NY", cb = TRUE) %>%
+  st_transform(crs = 4326)
+
+# Add a column for fill color
+ny_counties$fill_color <- ifelse(ny_counties$NAME %in% highlight_counties, "#fafced", NA)
+
+# Convert surv dataframe to sf object
+surv_sf <- st_as_sf(surv, coords = c("longitude", "latitude"), crs = 4326)
+
+# Convert st dataframe to sf object
+st_sf <- st_as_sf(st, coords = c("LON", "LAT"), crs = 4326)
+
+# Create the map
+ggplot() +
+  geom_sf(data = ny_counties, aes(fill = fill_color), color = "black") +
+  geom_sf(data = surv_sf, color = "blue", size = 1) +
+  geom_sf(data = st_sf, color = "red3", size = 2, pch = 8) +
+  scale_fill_identity() +
+  theme(panel.background = element_blank()) +
+  coord_sf(xlim = c(-80, -76.7), ylim = c(41.8, 43.5))
+```
+
+\newpage
+
+<!-- Supplementary Figure S3 -->
+
+```{r Figure-S3, results = 'hide', fig.height=8.0, fig.cap='Gridded spatial distribution of soil properties data retrieved from the POLARIS database over central and western New York State.'}
+library(tidyverse)
+library(sf)
+library(tigris)
+library(raster)
+library(terra)
+library(viridis)
+library(patchwork)
+
+# New York State shape file:
+ny_shape1 <- counties(state = "NY", cb = TRUE) %>%
+  st_transform(crs = 4326)
+
+# Load the raster data:
+aggre_var_list <- readRDS(here::here("OriginalCode", "soil_images", "list_soil_variables_raster_aggregated.rds"))
+
+# We use the function lapply() to crop all variables’ rasters using the NY shape file as a mask.
+aggre_var_list2 <- lapply(aggre_var_list, terra::mask, ny_shape1)
+
+selected_vars <- c('ph','om','clay',"sand","silt","bd","theta_r","theta_s")
+actual_var_names <- c("Soil pH in water", "Soil organic matter","Clay","Sand","Silt","Bulk density","Residual soil water content","Saturated soil water content")
+actual_var_symbol <- c("pH", "OM","Clay","Sand","Silt","BD","\u03B8r","\u03B8s")
+actual_var_units <- c("", "(%)","(%)","(%)","(%)","(g/cm³)","(m³/m³)","(m³/m³)")
+
+# Create a function for plotting the soil maps.
+plot_gg_raster <- function(X, raster, var) {
+  
+  if(var[X] == "om"){xx = 1 } else{xx = 0}
+  
+  raster_df <- 
+  as.data.frame(raster[[var[X]]], xy = TRUE) %>%
+    dplyr::filter(layer !="NaN", x< -76.8) %>%
+    dplyr::mutate(layer = case_when(xx == 1 ~ exp(layer),
+                                    xx == 0 ~ layer))
+  
+    ggplot() +
+    geom_raster(data = raster_df, aes(x, y, fill = layer)) +
+    scale_fill_viridis(option ="B", guide = guide_colorbar(barwidth = 0.2, barheight = 5)) +
+    geom_sf(data = ny_shape1, fill = NA, color = "white", size = 0.2, inherit.aes = FALSE) +
+    coord_sf(xlim = c(-80, -76.8), ylim = c(42, 43.35)) +
+    cowplot::theme_map() +
+    labs(title = paste("    ", actual_var_names[X]),
+         fill = paste(actual_var_symbol[X], actual_var_units[X]))
+}
+
+
+# Plot all maps into a single combo figure:
+do.call(patchwork::wrap_plots, lapply(X =1:length(selected_vars) , FUN = plot_gg_raster, raster = aggre_var_list2, var = selected_vars)) +
+  plot_layout(ncol = 2) +
+  plot_annotation(tag_levels = "A") &
+  theme(legend.position = "right",
+        legend.text = element_text(size = 5),
+        legend.title = element_text(size = 5),
+        plot.title =  element_text(size = 7, face = "bold"))
+```
+
+\newpage
+
+<!-- Supplementary Figure S4 -->
+
+```{r Figure-S4, fig.cap='The fit of a random forest model for predicting canopy gap in snap bean fields in central and western New York State. Points represent the individual data values. The black line references perfect correlation between actual and predicted canopy gap. The blue line is a linear regression of predicted on actual canopy gap values.'}
+library(ranger)
+library(tuneRanger)
+
+# The data:
+load(here::here("CanopyClosure", "canclos.RData"))  # cc.df
+
+# Filter to the vars needed for RF modeling:
+x <-
+  cc.df %>% 
+  dplyr::select(-subject, -planting.date, -sampling.date)
+
+# Load the fitted model:
+load(here::here("CanopyClosure", "tunedRF.RData"))  # rf3
+
+# Prediction
+fitted.vals <- predict(rf3$model, newdata = x)$data
+
+# The predicted values vs actual values on the data:
+# There is slight under-prediction at high values of can.clos, and over-prediction at low values of can.clos
+fitted.vals %>%
+  ggplot(., aes(x = truth, y = response)) + 
+  geom_point(color = "orange", alpha = 0.5) + 
+  coord_fixed(xlim = c(0, 150), ylim = c(0, 150)) +
+  # The fitted line is blue:
+  geom_smooth(method = lm, formula = 'y ~ x') +
+  geom_abline(slope = 1, intercept = 0, color = "black") +
+  theme_bw() +
+  ylab("Predicted canopy gap (cm)") + 
+  xlab("Actual canopy gap (cm)") + 
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12, hjust = 0.5),
+        axis.title.x = element_text(size = 14), axis.title.y = element_text(size = 14))
+```
+
+\newpage
+
+<!-- Supplementary Figure S5 -->
+
+```{r Figure-S5, fig.cap='Permutation-based variable importance plot for a random forest model fit to the full set of predictors available for forecasting the risk of white mold in snap bean fields in central and western New York State. The importance measure was computed using log loss as the performance metric, and scaled to between 0 and 100.'}
+library(tidyverse)
+library(ranger)
+library(vip)
+
+
+load(here::here("DataFusion", "FusedData.RData"))  # X
+load(here::here("Modeling", "rf_tuned.RData"))  # rf.tuned
+
+wm_metadata <- tribble(
+    ~variable,           ~variable_label, 
+    "subject",              "Snap bean field",
+    "wm",                   "White mold presence",
+    "drainage",             "Soil drainage class",
+    "hydrol",               "Soil hydrological group",
+    "cd",                   "Climate division",
+    "harv.optim",           "Field harvested <=60 dap",
+    "ph",                   "Soil pH",
+    "om",                   "Soil organic matter content (%)",
+    "log_sand_clay",        "Logratio sand:clay",
+    "log_silt_clay",        "Logratio silt:clay",
+    "cc35",                 "Canopy gap (cm)\nat 35 dap", 
+    "rainto35dap",          "Total rain (mm)\nfrom planting to 35 dap",
+    "rain36to50dap",        "Total rain (mm)\nfrom 36 to 50 dap", 
+    "t2m_mean_to_4dap",     "Mean air temperature (\u00B0C)\nfrom planting to 4 dap",
+    "sm_4dbp_to_3dap",      "Mean vsw (m³/m³)\nfrom 4 days before planting to 3 dap",
+    "sm_5dap_to_15dap",     "Mean vsw (m³/m³)\nfrom 5 to 15 dap", 
+    "sm_17dap_to_24dap",    "Mean vsw (m³/m³)\nfrom 17 to 24 dap",
+    "sm_40dap_to_49dap",    "Mean vsw (m³/m³)\nfrom 40 to 49 dap", 
+    "stsm_35dap_to_44dap",  "Mean soil temperature (\u00B0C):vsw (m³/m³)\nratio from 35 to 44 dap"
+)
+
+
+X.df <- 
+  X %>% 
+  # Remove the subject column:
+  # Also drainage, as prelim fitting showed it had NEGATIVE importance! Negative importance can happen, and indicates the variable is a worse predictor than random permutation.
+  dplyr::select(-subject, -drainage) %>% 
+  as.data.frame(X)
+
+rf.tuned.pars <-
+  tibble::tibble(
+    mtry = rf.tuned$recommended.pars$mtry,
+    min.node.size = rf.tuned$recommended.pars$min.node.size,
+    sample.fraction = rf.tuned$recommended.pars$sample.fraction,
+    num.trees = rf.tuned$model$learner$par.vals$num.trees
+  ) 
+
+
+set.seed(14092)
+m1 <- ranger(wm ~ ., 
+             data = X.df, 
+             importance = 'permutation',
+             scale.permutation.importance = TRUE,
+             # Set the hyperparameters:
+             num.trees = rf.tuned.pars$num.trees[1],
+             mtry = rf.tuned.pars$mtry[1],
+             min.node.size = rf.tuned.pars$min.node.size[1], 
+             sample.fraction = rf.tuned.pars$sample.fraction[1])
+
+# Create custom predict function that returns the predicted values as a vector
+pred <- function(object, newdata) {
+  results <- predict(object, data = newdata)$predictions
+  return(results)
+}
+
+
+# Here we will use the vi_permute function to set some other options, like use logloss as the metric.
+wm_vip <- 
+  vi_permute(
+  m1,
+  # metric arg calls yardstick, which expects wm = 1 (target) as the FIRST level; and as a factor:
+  train = X.df %>% dplyr::mutate(wm = factor(wm, levels = c(1, 0))),
+  target = "wm",
+  metric = "logloss",
+  smaller_is_better = TRUE,  # see list_metrics()
+  nsim = 10,
+  pred_wrapper = pred
+)
+
+# A named vector of the labels:
+wm_vip_labels <-
+  wm_metadata %>% 
+  dplyr::filter(!variable %in% c("subject", "wm", "drainage")) %>% 
+  tibble::deframe()
+
+# Plot with the more descriptive variable labels: 
+wm_vip %>%
+  dplyr::arrange(Importance) %>% 
+  dplyr::mutate(rel.imp = 100*Importance/sum(Importance)) %>% 
+  # use reorder() to sort the plot so highest importance is at the top:
+  ggplot(., aes(y = reorder(Variable, rel.imp), x = rel.imp)) +  
+  geom_point(size = 3, color = "orange") +
+  scale_y_discrete(labels = wm_vip_labels, name = NULL) +
+  # theme_minimal() +
+  theme_bw() +
+  scale_x_continuous(name = "Relative Importance") + 
+  theme(axis.title.x = element_text(face = "bold", size = 11)) +
+  theme(axis.text.y = element_text(size = 8))
+```
+
+\newpage
+
+<!-- Supplementary Figure S6 -->
+
+```{r Figure-S6, fig.cap='Histogram of fitted probability estimates of white mold presence in snap bean fields in central and western New York State, as returned by a random forest model fit to a subset of seven predictors identified by the Variable Selection Using Random Forests (VSURF) algorithm from the original set of 16 predictors.'}
+library(tidyverse)
+library(ranger)
+
+load(here::here("Modeling", "rf_tuned_sel.RData"))  # rf.tuned.sel, X.sel, selected_vars
+
+# Prediction (a data frame with two columns: truth, response)
+pred.vals <- predict(rf.tuned.sel$model, newdata = X.sel)$data
+
+pred.vals %>%
+  ggplot(aes(response)) +
+  geom_histogram(fill = "orange", col = "orange3", bins = 20) +
+  facet_wrap(~ as.factor(truth), ncol = 1, 
+             labeller = as_labeller(c("0" = "No White Mold", "1" = "White Mold Present"))) +
+  geom_rug(col = "blue", alpha = 0.5) + 
+  labs(x = "Probability estimate of white mold", y = "No. of fields") +
+  theme_bw()
+```
+
+\newpage
+
+<!-- Supplementary Figure S7 -->
+
+```{r Figure-S7, results='hide', fig.cap='Calibration plot for a simplified random forest model for forecasting the risk of white mold in snap bean fields in central and western New York State. The random forest model was fitted to a subset of seven predictors identified by the Variable Selection Using Random Forests (VSURF) algorithm from the original set of 16 predictors.'}
+
+library(tidyverse)
+library(ranger)
+library(CalibrationCurves)
+
+load(here::here("Modeling", "rf_tuned_sel.RData"))  # rf.tuned.sel, X.sel, selected_vars
+
+# Prediction (a data frame with two columns: truth, response)
+pred.vals <- predict(rf.tuned.sel$model, newdata = X.sel)$data
+
+CalibrationCurves::valProbggplot(pred.vals$response, pred.vals$truth)
+```
+
+\newpage
+
+<!-- Supplementary Figure S8 -->
+
+```{r Figure-S8, fig.height=8.0, fig.cap='Main effects SHapley Additive exPlanations (SHAP) dependence plots for a random forest model for forecasting the risk of white mold in snap bean fields in central and western New York State. The model was fitted to a subset of seven predictors identified by the Variable Selection Using Random Forests (VSURF) algorithm from the original set of 16 predictors. vsw = soil water content expressed as the volumetric mixing ratio in the upper 0 to 7 cm. dap = days after planting. SHAP values are plotted with respect to the predictor variable values: **A,** Mean vsw (m³/m³) from 40 to 49 dap; **B,** Mean air temperature (°C) from planting to 4 dap: **C,** Mean soil temperature (°C):vsw (m³/m³) ratio from 35 to 44 dap; **D,** Mean vsw (m³/m³) from 5 to 15 dap; **E,** Total rain (mm) from 36 to 50 dap; **F,** Total rain (mm) from planting to 35 dap; **G,** Logratio silt:clay in the 0 to 5 cm depth layer. Trends in the SHAP values are indicated by loess smooths (blue curves) added to each panel.'}
+
+library(tidyverse)
+library(patchwork)
+library(kernelshap)
+library(shapviz)
+
+wm_metadata <- tribble(
+    ~variable,           ~variable_label, 
+    "subject",              "Snap bean field",
+    "wm",                   "White mold presence",
+    "drainage",             "Soil drainage class",
+    "hydrol",               "Soil hydrological group",
+    "cd",                   "Climate division",
+    "harv.optim",           "Field harvested <=60 dap",
+    "ph",                   "Soil pH",
+    "om",                   "Soil organic matter content (%)",
+    "log_sand_clay",        "Logratio sand:clay",
+    "log_silt_clay",        "Logratio silt:clay",
+    "cc35",                 "Canopy gap (cm)\nat 35 dap", 
+    "rainto35dap",          "Total rain (mm)\nfrom planting to 35 dap",
+    "rain36to50dap",        "Total rain (mm)\nfrom 36 to 50 dap", 
+    "t2m_mean_to_4dap",     "Mean air temperature (\u00B0C)\nfrom planting to 4 dap",
+    "sm_4dbp_to_3dap",      "Mean vsw (m³/m³)\nfrom 4 days before planting to 3 dap",
+    "sm_5dap_to_15dap",     "Mean vsw (m³/m³)\nfrom 5 to 15 dap", 
+    "sm_17dap_to_24dap",    "Mean vsw (m³/m³)\nfrom 17 to 24 dap",
+    "sm_40dap_to_49dap",    "Mean vsw (m³/m³)\nfrom 40 to 49 dap", 
+    "stsm_35dap_to_44dap",  "Mean soil temperature (\u00B0C):vsw (m³/m³)\nratio from 35 to 44 dap"
+)
+
+# A named vector of the labels:
+wm_vip_labels <-
+  wm_metadata %>% 
+  dplyr::filter(!variable %in% c("subject", "wm", "drainage")) %>% 
+  tibble::deframe()
+
+load(here::here("Modeling", "rf_tuned_sel.RData"))  # rf.tuned.sel, X.sel, selected_vars
+
+rf.tuned.sel.pars <-
+  tibble::tibble(
+    mtry = rf.tuned.sel$recommended.pars$mtry,
+    min.node.size = rf.tuned.sel$recommended.pars$min.node.size,
+    sample.fraction = rf.tuned.sel$recommended.pars$sample.fraction,
+    num.trees = rf.tuned.sel$model$learner$par.vals$num.trees
+    ) 
+
+set.seed(14092)
+m2 <- ranger(wm ~ ., 
+             data = X.sel, 
+             importance = 'permutation',
+             scale.permutation.importance = TRUE,
+             # Set the hyperparameters:
+             num.trees = rf.tuned.sel.pars$num.trees[1],
+             mtry = rf.tuned.sel.pars$mtry[1],
+             min.node.size = rf.tuned.sel.pars$min.node.size[1], 
+             sample.fraction = rf.tuned.sel.pars$sample.fraction[1])
+
+ps <- kernelshap::permshap(m2, X.sel[-8], bg_X = X.sel)
+
+sv <- shapviz(ps)
+
+# A wrapper function to do a main dependence plot (no interactions shown)
+my_dependence_fxn <- function(i) {
+  # Args:
+  #  i = numeric index 1-7 to pull out a var from the respective vector
+  # Returns:
+  #  an edited dependence plot
+  
+  sv_dependence(sv, selected_vars[i], color_var = NULL, color = "orange", size=1) +
+  geom_smooth(method = "loess", formula = 'y ~ x', se = FALSE) +
+  xlab(wm_vip_labels[selected_vars[i]]) + 
+  theme_bw() +
+  theme(axis.title.y = element_text(face = "bold", size = 8)) +
+  theme(
+        axis.text.x = element_text(size = 7),  # Decrease x-axis tick label size
+        axis.text.y = element_text(size = 7)  # Decrease y-axis tick label size
+        ) +
+  theme(axis.title.x = element_text(face = "bold", size = 8)) 
+}
+
+p1 <- my_dependence_fxn(1)
+p2 <- my_dependence_fxn(2)
+p3 <- my_dependence_fxn(3)
+p4 <- my_dependence_fxn(4)
+p5 <- my_dependence_fxn(5)
+p6 <- my_dependence_fxn(6)
+p7 <- my_dependence_fxn(7)
+
+p1 + p2 + p3 + p4 + p5 + p6 + p7 +
+  plot_annotation(tag_levels = 'A') +
+  plot_layout(nrow = 4, byrow = T) + 
+  plot_layout(axis_titles = "collect")
+```
+
+\newpage
+
+# Appendix S1
+
+Fitted logistic regression function for predicting white mold prevalence in snap beans in central and western New York State.
+
+vsw = soil water content expressed as the volumetric mixing ratio in the upper 0 to 7 cm.
+
+dap = days after planting.
+
+The three predictors, all represented by restricted cubic splines are:
+
+-   t2m_mean_to_4dap = Mean air temperature (°C) from planting to 4 dap
+-   sm_40dap_to_49dap = Mean vsw (m³/m³) from 40 to 49 dap
+-   rain36to50dap = Total rain (mm) from 36 to 50 dap
+
+```{r LR-model-function}
+library(rms)
+
+# Load the object containing X.sel
+load(here::here("Modeling", "rf_tuned_sel.RData"))
+
+
+# Create a datadist object
+dd <- rms::datadist(X.sel)
+
+options(datadist = "dd")
+
+fmla <- formula(paste("wm", "~", 
+                      paste(c("rcs(t2m_mean_to_4dap, 3)",
+                              "rcs(sm_40dap_to_49dap, 3)",
+                              "rcs(rain36to50dap, 3)"), 
+                            collapse = "+")))
+
+M0 <- rms::lrm(fmla, data = X.sel, x = T, y = T)
+
+Function(M0)
+```
+
+\newpage
+
+# Computational environment
+
+```{r SessionInfo, eval=TRUE, echo=FALSE}
+R.Version()$version.string
+R.Version()$system
+sessionInfo()
+```

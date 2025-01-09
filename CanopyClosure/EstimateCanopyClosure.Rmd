@@ -17,6 +17,7 @@ output:
 ---
 
 # OBJECTIVE
+
 Estimate canopy closure at 35 dap
 
 ```{r setup, include=FALSE, eval=TRUE}
@@ -26,7 +27,6 @@ require(knitr)
 knitr::opts_chunk$set(eval = TRUE, echo = FALSE, cache = FALSE, warning = FALSE, message = FALSE)
 ```
 
-
 ```{r Libraries, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(kableExtra)
@@ -34,7 +34,6 @@ library(kableExtra)
 library(labelled)      # for general functions to work with labelled data
 library(gtsummary)     # automatic use of variable labels in summary tables
 ```
-
 
 ```{r functions}
 make_kable <- function(...) {
@@ -59,13 +58,10 @@ find.dup.rows <- function(x) {
   }
 ```
 
-
-
 ```{r load-the-survey-data}
 # The observational (survey) matrix:
 load(here::here("Data", "Survey.RData"))  # df
 ```
-
 
 ```{r parsing-the-survey-data, eval=FALSE}
 # Preliminary exploration of the variables:
@@ -152,7 +148,6 @@ agron %>%
 agron %>% dplyr::distinct(subject) %>% nrow()  
 ```
 
-
 ```{r soils-data}
 soils <- 
   read.csv(here::here("Data", "extracted_soil_data.csv")) %>% 
@@ -192,7 +187,6 @@ soils <-
 # No duplicated rows:
 find.dup.rows(soils)
 ```
-
 
 ```{r environmental-vars-part-1}
 wm_load <- readr::read_csv(here::here("Data", "data_model_plus_weather_filtered.csv"), show_col_types = FALSE)
@@ -288,7 +282,6 @@ summary(env_data)
 find.dup.rows(env_data)
 ```
 
-
 ```{r environmental-vars-part-2}
 # Load the sunshine duration and rain vars (the `wm_wvars` dataframe):
 load(here::here("Openmeteo", "wm_WeatherVars.RData"))  # wm_wvars
@@ -301,10 +294,7 @@ find.dup.rows(wm_wvars)
 rm(df, wm_load, smry.vars)
 ```
 
-
-
-NEXT:
-Join the separate dataframes together.
+NEXT: Join the separate dataframes together.
 
 ```{r join-separate-dataframes}
 names(agron)
@@ -329,13 +319,12 @@ skimr::skim(cc.df)
 unique(cc.df$subject) %>% length()
 ```
 
-
 ```{r save-the-prepped-data, eval=FALSE}
 save(cc.df, file = here::here("CanopyClosure", "canclos.RData"))
 ```
 
-
 # Describing the cc.df data
+
 ```{r assign-variable-labels}
 # A good Intro to why variable labels may help is here:
 # https://www.pipinghotdata.com/posts/2022-09-13-the-case-for-variable-labels-in-r/
@@ -382,7 +371,9 @@ cc.df |>
 ```
 
 ## Data dictionary
+
 <!-- One use of labels: Create a data dictionary -->
+
 ```{r create-a-data-dictionary}
 ccdf_dictionary <- ccdf_labelled |> 
   generate_dictionary()
@@ -391,8 +382,8 @@ ccdf_dictionary |>
   make_kable()
 ```
 
-
 ## The variables
+
 ```{r data-summary-table}
 ccdf_labelled |> 
   dplyr::select(-subject, -planting.date, -sampling.date, -can.closure) |>
@@ -402,8 +393,8 @@ ccdf_labelled |>
   bold_labels()
 ```
 
-
 # Fitting canopy closure as a response variable
+
 ```{r load-canclos-dataset}
 load(here::here("CanopyClosure", "canclos.RData"))  # cc.df
 
@@ -413,8 +404,8 @@ x <-
   dplyr::select(-subject, -planting.date, -sampling.date)
 ```
 
-
 ## Tuning a ranger model
+
 ```{r tune-ranger-model, eval=FALSE}
 library(ranger)
 library(tuneRanger)
@@ -437,7 +428,6 @@ rf3 <- tuneRanger(cc.task, num.trees = 1000)
 # Save the fitted model so that you don't have to re-tune:
 save(rf3, file = here::here("CanopyClosure", "tunedRF.RData"))
 ```
-
 
 ```{r tuned-ranger-model-predictions}
 # Load the fitted model:
@@ -474,16 +464,12 @@ fitted.vals %>%
         axis.title.x = element_text(size = 14), axis.title.y = element_text(size = 14))
 ```
 
-
 ```{r tuned-ranger-model-rmse}
 residuals <- x$can.closure - fitted.vals
 
 # RMSE: 2.52
 sqrt(sum(residuals^2)/nrow(x))
 ```
-
-
-
 
 ```{r prediction-at-35dap}
 # Prediction of can.clos at 35 dap entails:
@@ -611,8 +597,6 @@ summary(cc.df.35dap)
 save(cc.df.35dap, file = here::here("CanopyClosure", "cc.df.35dap.RData"))
 ```
 
-
-
 ```{r canclos-at-35-dap-summary, eval=FALSE}
 # Did all the work to get the cc var at 35 dap lead to anything that could be meaningfully used?
 
@@ -661,4 +645,3 @@ x %>%
   labs(x = "Canopy gap at 35 dap (cm)") +
   theme_bw()
 ```
-

@@ -1,0 +1,335 @@
+---
+title: Soil data
+subtitle: "Downloading and wragling soil data"
+author: "Kaique Alves"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+---
+
+## Packages
+
+::: callout-warning
+# About R packages
+
+Make sure to have all R packages installed before running the analysis described in this website.
+
+:::
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(cowplot)
+library(patchwork)
+library(daymetr)
+library(raster)
+library(spatstat)
+library(KrigR)
+library(lubridate)
+library(sf)
+library(viridis)
+library(terra)
+library(XPolaris)
+library(MetBrewer)
+```
+
+```{r eval=TRUE, include=FALSE}
+library(knitr)
+
+knit_print.data.frame <- function (x, options, ...) {
+  rmarkdown::paged_table(x, options) %>% 
+    rmarkdown:::print.paged_df()
+}
+
+registerS3method("knit_print", "data.frame", knit_print.data.frame)
+```
+
+## White mold data
+
+Loading white mold data. We are going to use the field coordinates (latitude and longitude) to extract the data from the rasters of soil variables.
+
+::: callout-warning
+# About the Data
+
+In the research [repository](https://osf.io/v53py/){target="_blank"}, the directories containing the soil, weather, white mold can be downloaded using the folowing links([`data_era5.zip`](https://osf.io/download/k39bd/),[`soil_images.zip`](https://osf.io/download/2jfcz/), [`data_white-mold.zip`](https://osf.io/download/ehy26/)). You should unzip these files in the main directory to be able to reproduce the analysis.
+:::
+
+```{r}
+wm_data = read.csv("data_white-mold/WhiteMoldSurveyWrangledData.csv")
+```
+
+### Removing missing coordinates
+
+There are some missing coordinates in the dataset. Here we remove them.
+
+```{r}
+wm_data2 = wm_data %>% 
+  filter(!is.na(latitude))
+```
+
+## Soil variables
+
+### Locations
+
+Setting up the coordinated of each quadrat we need to download the soil data
+
+```{r}
+# exkansas
+ny_locations = data.frame(ID = c("NY1","NY2","NY3","NY4","NY5","NY6","NY7","NY8"),
+                          lat  = c(42,  42,  42, 42, 43,   43,   43,   43),
+                          long = c(-77, -78,-79, -80,-77, -78.0,-79.0, -80))
+
+xplot(locations = ny_locations)+
+  geom_point(data = wm_data2 , size = 0.3,
+             aes(longitude,latitude))+
+  coord_map( xlim = c(-81,-75),
+             ylim = c(41.5,44.5))
+
+# max(wm_data2$longitude)
+```
+
+### Download soil data
+
+```{r eval=FALSE, include=T}
+ny_images <- ximages(locations = ny_locations,
+                      statistics = c('mean'),
+                      variables = c('ph','om','clay',"sand","silt","bd", "hb","n","alpha","ksat","lambda","theta_r","theta_s"),
+                      layersdepths = c('0_5'),
+                      localPath = file.path("soil_images"))
+```
+
+Here we read the metadata of the downloaded data. It containg the information regarding the directory of each downloaded file.
+
+```{r include=FALSE}
+ny_images = read.csv("data_white-mold/df_soil_metadata.csv")
+```
+
+### Merge images
+
+#### Organic matter
+
+We are going to filter only the lines contain information regarding Organic matter
+
+```{r}
+om_df_images = ny_images %>% 
+  filter(variables == "om")
+```
+
+As you can notice in the next figure, the raster objects are downloaded in separate raster of 01 degree size
+
+```{r}
+# read all files for organic matter
+om_stack = lapply(om_df_images$local_file, brick)
+
+
+par(mfrow = c(2,4))
+
+for(i in 1:length(om_stack)){
+plot(om_stack[[i]])
+}
+```
+
+Therefore, we use the function `merge()` to create a single raster object covering the whole study region
+
+```{r}
+
+om_ny_raster =merge(om_stack[[1]],
+                    om_stack[[2]],
+                    om_stack[[3]],
+                    om_stack[[4]],
+                    om_stack[[5]],
+                    om_stack[[6]],
+                    om_stack[[7]],
+                    om_stack[[8]])
+
+plot(exp(om_ny_raster))
+```
+
+### Automatization
+
+Instead of doing the above step for each variable by hand, here we created a function to do all the steps automatically.
+
+```{r}
+
+get_soil_var = function(var, data){
+  data_filtered = data %>% 
+  filter(variables == var)
+
+stack_list = lapply(data_filtered$local_file, brick)
+  
+  
+  merged_raster = merge(stack_list[[1]],
+                    stack_list[[2]],
+                    stack_list[[3]],
+                    stack_list[[4]],
+                    stack_list[[5]],
+                    stack_list[[6]],
+                    stack_list[[7]],
+                    stack_list[[8]]
+                    )
+  return(merged_raster)
+}
+
+soil_vars = c('ph','om','clay',"sand","silt","bd", "hb","n","alpha","ksat","lambda","theta_r","theta_s")
+
+selected_vars = c('ph','om','clay',"sand","silt","bd","theta_r","theta_s")
+```
+
+```{r eval=FALSE, include=T}
+soil_variables_list = lapply(soil_vars,get_soil_var, data = ny_images)
+names(soil_variables_list) = soil_vars
+
+saveRDS(soil_variables_list, "soil_images/list_soil_variables_raster.rds")
+```
+
+```{r eval=FALSE, include=FALSE}
+soil_variables_list = readRDS("soil_images/list_soil_variables_raster.rds")
+
+```
+
+```{r eval=FALSE, include=FALSE}
+om_aggreg = aggregate(soil_variables_list$om, fact=30)
+
+as.data.frame(om_aggreg, xy = T) %>% 
+  filter(layer !="NaN") %>% 
+  ggplot(aes())+
+  geom_raster(aes(x, y, fill = layer))+
+  scale_fill_viridis(option ="B")+
+  theme_map()
+
+```
+
+```{r eval=FALSE, include=TRUE}
+aggre_var_list = lapply(soil_variables_list, aggregate,fact=30)
+
+saveRDS(aggre_var_list, "soil_images/list_soil_variables_raster_aggregated.rds")
+
+
+```
+
+```{r eval=T, include=FALSE}
+aggre_var_list = readRDS("soil_images/list_soil_variables_raster_aggregated.rds")
+```
+
+### Plot soil maps
+
+#### NY shape file
+
+Loading New York state shape file.
+
+```{r}
+ny_shape1 = read_sf("shape_files/cugir-007865/cugir-007865/cty036.shp")
+```
+
+#### Cropping raster files
+
+We use the function `lappy()` to crop all variables' rasters using the NY shape file as a mask.
+
+```{r}
+aggre_var_list2 = lapply(aggre_var_list, mask, ny_shape1)
+```
+
+Then here we create a function for ploting the soil maps.
+
+```{r}
+actual_var_names = c("Soil pH in water", "Soil organic matter","Clay","Sand","Silt","Bulk density","Residual soil water content","Saturated soil water content")
+actual_var_symbol = c("pH", "OM","Clay","Sand","Silt","BD","\u03B8r","\u03B8s")
+actual_var_units = c("", "(%)","(%)","(%)","(%)","(g/cm³)","(m³/m³)","(m³/m³)")
+
+plot_gg_raster =  function(X,raster, var){
+  # actual_var_names[X]
+
+if(var[X] == "om"){xx=1}else{xx = 0}
+  
+as.data.frame(raster[[var[X]]], xy = T) %>%
+    filter(layer !="NaN", x< -76.8) %>%
+  mutate(layer = case_when(xx ==1~ exp(layer),
+                           xx ==0~ layer)) %>% 
+    ggplot(aes())+
+    geom_raster(aes(x, y, fill = layer))+
+    scale_fill_viridis(option ="B",guide = guide_colorbar(barwidth = 0.2, barheight =5 ))+
+    geom_sf(data = ny_shape1,
+                 # aes(x=long, y = lat, group = group),
+                 fill= NA,
+                 linewidth =0.2,
+                 alpha = 0.5,
+                 color = "white")+
+  # geom_point(data = wm_data2 , size = 0.1,color = "white",
+  #            aes(longitude,latitude))+
+    # coord_quickmap(xlim = c(-80,-76.8), ylim = c(42,43.35))+
+    coord_sf(xlim = c(-80,-76.8), ylim = c(42,43.35))+
+    theme_map()+
+    labs(title =paste("    ",actual_var_names[X]),
+         fill = paste(actual_var_symbol[X],actual_var_units[X]))
+}
+
+# selected_vars
+# aggre_var_list[[1]]
+# plot_gg_raster(1,aggre_var_list2, var = selected_vars[1] )
+```
+
+```{r}
+as.data.frame(aggre_var_list2$ph, xy = T) %>%
+    filter(layer !="NaN", x< -76.8) %>%
+  # mutate(layer = case_when(xx ==1~ exp(layer),
+  #                          xx ==0~ layer)) %>% 
+    ggplot(aes())+
+    geom_raster(aes(x, y, fill = layer))+
+    scale_fill_viridis(option ="B",guide = guide_colorbar(barwidth = 0.2, barheight =5 ))+
+    geom_sf(data = ny_shape1,
+                 # aes(x=long, y = lat, group = group),
+                 fill= NA,
+                 linewidth =0.2,
+                 alpha = 0.5,
+                 color = "white")
+
+```
+
+
+#### Combo soil maps
+
+Here we plot all maps into a single combo fiure
+
+```{r}
+do.call(patchwork::wrap_plots, lapply(X =1:length(selected_vars) , FUN =plot_gg_raster, raster = aggre_var_list2, var = selected_vars))+
+  plot_layout(ncol = 2)+
+  plot_annotation(tag_levels = "A")&
+  theme(legend.position = "right",
+        legend.text = element_text(size = 5),
+        legend.title = element_text(size = 5),
+        plot.title =  element_text(size = 7, face = "bold"))
+
+ggsave("figs/maps/soil_maps.png", dpi = 900, height = 7, width = 7, bg = "white")
+```
+
+## Extract variables to location
+
+```{r  eval=FALSE, include=TRUE}
+wm_data2_uni = wm_data2 %>% 
+  group_by(subject) %>% 
+  slice(1L)
+```
+
+Selecting coordinate columns from the white mold data set
+
+```{r  eval=FALSE, include=TRUE}
+coords<-data.frame(lon=wm_data2_uni$longitude, lat=wm_data2_uni$latitude)
+coordinates(coords)<-c("lon","lat")
+```
+
+Extracting variable from the original merged raster (30 meters resolution)
+
+```{r eval=FALSE, include=TRUE}
+df1 = lapply(soil_variables_list, extract, coords@coords)
+as.data.frame(df1) %>% 
+  mutate(subject =wm_data2_uni$subject) %>% 
+  cbind(longitude=wm_data2_uni$longitude, 
+        latitude=wm_data2_uni$latitude) %>% 
+  write.csv("soil_images/extracted_soil_data.csv",row.names = F)
+
+```
+
+```{r include=FALSE}
+file = "code_soil_variables_white-mold_files/desktop.ini"
+if (file.exists(file)) {
+ unlink(file)
+ cat("The file is deleted")
+}
+```

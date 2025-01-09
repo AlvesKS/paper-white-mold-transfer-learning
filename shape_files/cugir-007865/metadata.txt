@@ -1,0 +1,3 @@
+shape file source -> https://cugir.library.cornell.edu/catalog/cugir-007865
+
+description can be found here ->  https://cugir-data.s3.amazonaws.com/00/78/65/fgdc.html

@@ -17,22 +17,8 @@ output:
 ---
 
 # OBJECTIVE
-Fuse the different sources of variables linked to the field observations:
- - the survey data (subject and wm response variable)
- - agronomic (drainage, hydrol, year, cd, harv.optim)
- - soils (ph, om, log_sand_clay, log_silt_clay)
- - canopy closure at 35 dap
- - total rain from planting to 35 dap (pre-bloom)
- - total rain from 36-50 dap (bloom through early pod fill)
- - vars identified from FDA:
-   - t2m_mean:  start = 0, end = 4
-   - sm:        start = -4, end = 3
-   - sm:        start = 5, end = 15
-   - sm:        start = 17, end = 24
-   - sm:        start = 40, end = 49
-   - stsm:      start = 35, end = 44
 
-
+Fuse the different sources of variables linked to the field observations: - the survey data (subject and wm response variable) - agronomic (drainage, hydrol, year, cd, harv.optim) - soils (ph, om, log_sand_clay, log_silt_clay) - canopy closure at 35 dap - total rain from planting to 35 dap (pre-bloom) - total rain from 36-50 dap (bloom through early pod fill) - vars identified from FDA: - t2m_mean: start = 0, end = 4 - sm: start = -4, end = 3 - sm: start = 5, end = 15 - sm: start = 17, end = 24 - sm: start = 40, end = 49 - stsm: start = 35, end = 44
 
 ```{r setup, include=FALSE, eval=TRUE}
 options(digits = 3)
@@ -41,14 +27,13 @@ require(knitr)
 knitr::opts_chunk$set(eval = TRUE, echo = FALSE, cache = FALSE, warning = FALSE, message = FALSE)
 ```
 
-
 ```{r Libraries, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(kableExtra)
 ```
 
-
 # the survey data (subject and wm response variable)
+
 ```{r}
 # The observational (survey) matrix:
 load(here::here("Data", "Survey.RData"))  # df
@@ -69,8 +54,8 @@ surv <-
   dplyr::select(subject, wm)
 ```
 
-
 # agronomic (drainage, hydrol, cd, harv.optim)
+
 ```{r}
 agron <-
   df %>% 
@@ -102,8 +87,8 @@ agron <-
   dplyr::distinct()
 ```
 
-
 # soils (ph, om, log_sand_clay, log_silt_clay)
+
 ```{r}
 soils <- 
   read.csv(here::here("Data", "extracted_soil_data.csv")) %>% 
@@ -119,37 +104,37 @@ soils <-
   dplyr::select(subject, ph, om, log_sand_clay, log_silt_clay)
 ```
 
-
 # canopy closure at 35 dap
+
 ```{r}
 load(here::here("CanopyClosure", "cc.df.35dap.RData")) # cc.df.35dap
 ```
 
-
 # Rain
- - total rain from planting to 35 dap (pre-bloom)
- - total rain from 36-50 dap (bloom through early pod fill)
- 
+
+-   total rain from planting to 35 dap (pre-bloom)
+-   total rain from 36-50 dap (bloom through early pod fill)
+
 ```{r}
 load(here::here("Openmeteo", "rain_vars.RData")) # rain_vars
 ```
- 
- 
-# Other environmental variables 
-- vars identified from FDA:
-   - t2m_mean:  start = 0, end = 4
-   - sm:        start = -4, end = 3
-   - sm:        start = 5, end = 15
-   - sm:        start = 17, end = 24
-   - sm:        start = 40, end = 49
-   - stsm:      start = 35, end = 44
+
+# Other environmental variables
+
+-   vars identified from FDA:
+    -   t2m_mean: start = 0, end = 4
+    -   sm: start = -4, end = 3
+    -   sm: start = 5, end = 15
+    -   sm: start = 17, end = 24
+    -   sm: start = 40, end = 49
+    -   stsm: start = 35, end = 44
 
 ```{r}
 load(here::here("FunctionalDataAnalysis", "FunctiononScalar", "WeatherVars.RData"))  # weather.vars
 ```
 
-
 # Join em up!
+
 ```{r}
 X <- purrr::reduce(list(surv, agron, soils, cc.df.35dap, rain_vars, weather.vars), dplyr::left_join, by = "subject") %>% 
   # Rename vars to avoid things like a minus sign in a var name (avoid possible problems later on), more descriptive names. dbp = days before planting, dap = days after planting
@@ -166,4 +151,3 @@ names(X)
 # Save the data frame:
 save(X, file = here::here("DataFusion", "FusedData.RData"))
 ```
-

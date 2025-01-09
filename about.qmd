@@ -1,0 +1,47 @@
+---
+title: "About this study"
+---
+
+## **Safer and Smarter: Leveraging Transfer Learning and Data Fusion of Disease and Environmental Data for Modeling Plant Disease Risk**
+
+**Kaique S. Alves^1,2^; Denis A. Shah^3^; Helene. R. Dillard^4^; Emerson M. Del Ponte^1^; Sarah J. Pethybridge^2\*^**
+
+> ^**1**^ Departamento de Fitopatologia, Universidade Federal de Viçosa, Viçosa, MG 36570-900, Brazil
+>
+> ^**2**^ Plant Pathology & Plant-Microbe Biology Section, School of Integrative Plant Science, Cornell University, Geneva, NY 14456, USA
+>
+> ^**3**^ Department of Plant Pathology, Kansas State University, Manhattan, KS 66506, USA
+>
+> ^**4**^ College of Agricultural and Environmental Sciences, University of California, Davis, CA 95616, USA
+>
+> \***Corresponding author**: Sarah. J. Pethybridge
+>
+> **Email**: sjp277\@cornell.edu
+
+## Summary
+
+We developed a workflow for enhancing small observational datasets to model plant disease risk. Using white mold in snap beans as a case study, we fused georeferenced disease observations with soil variables and features from downscaled weather data. Functional data analysis identified key periods in the weather series, and random forests highlighted critical predictors, which were used to build a simpler logistic regression model. This approach demonstrates how machine learning can guide the development of calibrated, practical models, addressing overfitting and aligning analytical complexity with dataset size.
+
+## Original article
+
+::: {.callout-note appearance="simple"}
+# This [repository](https://osf.io/v53py/){target="_blank"} contains the data and code for our article:
+
+Alves, K.S., Shah, D.A., Dillard, H.R., Del Ponte, E.M., Pethybridge, S.J. (YYYY) Safer and Smarter: Leveraging Transfer Learning and Data Fusion of Disease and Environmental Data for Modeling Plant Disease Risk. Name of journal/book <https://doi.org/xxx/xxx>
+:::
+
+## Read the Preprint
+
+::: {.callout-note appearance="simple"}
+# Our pre-print is online on the OSF preprint server:
+
+Alves, K.S., Shah, D.A., Dillard, H.R., Del Ponte, E.M., Pethybridge, S.J. (YYYY) Safer and Smarter: Leveraging Transfer Learning and Data Fusion of Disease and Environmental Data for Modeling Plant Disease Risk. Online at <doi.org/10.31219/osf.io/9tgau>
+:::
+
+## Research compendium
+
+::: {.callout-note appearance="simple"}
+## Please cite this research compendium as:
+
+Alves, K. S., Shah, D. A., Dillard, H. R., Del Ponte, E. M., & Pethybridge, S. J. (2022, August 3). Research Compendium: Safer and Smarter: Leveraging Transfer Learning and Data Fusion of Disease and Environmental Data for Modeling Plant Disease Risk. https://doi.org/10.17605/OSF.IO/V53PY
+:::

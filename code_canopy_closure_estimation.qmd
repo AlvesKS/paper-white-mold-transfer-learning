@@ -1,0 +1,640 @@
+---
+title: "Canopy closure"
+subtitle: "Observational, agronomic, soils and weather variables"
+author: "Denis Shah"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+---
+# OBJECTIVE
+
+Estimate canopy closure at 35 dap
+
+```{r setup, include=FALSE, eval=TRUE}
+options(digits = 3)
+require(knitr)
+## options
+knitr::opts_chunk$set(eval = TRUE, echo = T, cache = FALSE, warning = FALSE, message = FALSE)
+```
+
+# Packages
+
+```{r Libraries, echo=T, eval=TRUE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(kableExtra)
+
+library(labelled)      # for general functions to work with labelled data
+library(gtsummary)     # automatic use of variable labels in summary tables
+```
+
+# Functions
+```{r functions}
+make_kable <- function(...) {
+  # kable and kableExtra styling to avoid repetitively calling the styling over and over again
+  # See: https://stackoverflow.com/questions/73718600/option-to-specify-default-kableextra-styling-in-rmarkdown
+  # knitr::kable(...) %>%
+  kable(..., format = "html", row.names = TRUE, align = 'l') %>%
+    kable_styling(bootstrap_options = c("striped"), position = "left", font_size = 11, full_width = FALSE) 
+}
+
+
+find.dup.rows <- function(x) {
+  # Find duplicated rows in a data frame
+  # Args:
+  #  x = unquoted name of a data frame
+  # Returns:
+  #  a tibble showing the duplicated rows
+  x %>% 
+  dplyr::group_by(across(everything())) %>% 
+  dplyr::filter(n() > 1) %>%
+  dplyr::ungroup()
+  }
+```
+
+## Load and process the data
+```{r load-the-survey-data}
+# The observational (survey) matrix:
+load(here::here("Data", "Survey.RData"))  # df
+```
+
+```{r parsing-the-survey-data, eval=FALSE}
+# Preliminary exploration of the variables:
+df1 <- 
+  df %>% 
+  # Filter out the PA fields (Potter county):
+  dplyr::filter(! county == "Potter") %>% 
+  # Agronomic variables from the observational data to potentially use to predict canopy closure.
+  dplyr::select(subject, soil.type, drainage.class, hydro.group, vg) %>%
+  dplyr::filter(complete.cases(.)) %>% 
+  dplyr::distinct(.)
+  
+
+summary(df1)
+
+# soil.type: 106 groups!! Too many, no clear way to collapse. DO NOT USE..
+df1 %>% dplyr::count(soil.type)
+
+# drainage.class: imbalance in groups. Collapse into well-drained and poorly-drained
+df1 %>% dplyr::count(drainage.class)
+
+# hydro.group: Collapse the dual categories into group D
+df1 %>% dplyr::count(hydro.group)
+
+rm(df1)
+```
+
+```{r create-agron-dataframe}
+# The agronomic data we'll use for predicting canopy closure
+agron <-
+  df %>% 
+  dplyr::filter(! county == "Potter") %>% 
+  # Filter out the missing canopy closure, location data:
+  dplyr::filter(!is.na(can.closure), !is.na(latitude), !is.na(longitude)) %>% 
+  # Collapse drainage.class into two groups:
+  dplyr::mutate(drainage = 
+                  forcats::fct_collapse(drainage.class,
+                                        `Poorly_Drained` = c("Somewhat poorly drained", "Poorly drained", "Very poorly drained"),
+                                        `Well_Drained` = c("Somewhat excessively drained", "Well drained", "Moderately well drained"))) %>%
+  # Collapse the dual categories of hydro.group into group D (natural condition):
+  dplyr::mutate(hydrol = 
+                  forcats::fct_collapse(hydro.group,
+                                        `A` = "A",
+                                        `B` = "B",
+                                        `C` = "C",
+                                        `D` = c("D", "A/D", "B/D", "C/D"))) %>%
+  # If dap is >60, then consider the field beyond the optimal harvest time (60 dap): Create a binary variable to represent this:
+  dplyr::mutate(harv.optim = ifelse(dap <= 60, 0, 1)) %>% 
+  dplyr::mutate(harv.optim = factor(harv.optim, levels = c(0, 1), labels = c("Yes", "No"))) %>% 
+  # Selecting vars with no missing values, and which don't have a lot of small obs in categories:
+  dplyr::select(subject, planting.date, sampling.date, drainage, hydrol, year, cd, harv.optim, can.closure) %>% 
+  # Removal of duplicated rows:
+  dplyr::distinct()
+
+# No duplicated rows:
+find.dup.rows(agron)
+```
+
+```{r examine-the-agron-dataframe, eval=FALSE}
+## Examine the `agron` data frame:
+# All the rows are complete:
+summary(agron)
+# Most of the observational data rows (1081 out of 1194) are within the optimal harvest period:
+agron %>% dplyr::count(harv.optim)
+
+# The distribution of the number of times a field was observed:
+# Most fields were observed 1-4 times during a season: 
+agron %>% 
+  dplyr::add_count(subject) %>%
+  dplyr::group_by(subject) %>%
+  dplyr::summarise(times_obs = mean(n)) %>%
+  dplyr::group_by(times_obs) %>%
+  dplyr::summarise(count = n()) %>% 
+  ggplot(., aes(x = times_obs, y = count)) +
+  geom_point(size = 3) +
+  geom_segment(aes(x = times_obs, xend = times_obs, y = 0, yend = count)) +
+  scale_x_continuous(breaks = 1:10) +
+  labs(x = "Number of Times Observed", 
+       y = "Number of Subjects") +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank())
+
+# 375 subjects:
+agron %>% dplyr::distinct(subject) %>% nrow()  
+```
+
+```{r soils-data}
+soils <- 
+  read.csv(here::here("Data", "extracted_soil_data.csv")) %>% 
+  dplyr::select(-longitude, -latitude)
+
+# The descriptions of the vars are here:
+# https://github.com/lhmrosso/XPolaris/
+names(soils)
+summary(soils)
+
+# We'll focus on the following:
+# ph = Soil pH in water
+# om = Soil organic matter (%)
+# clay = Clay (%)
+# sand = Sand (%)
+# silt = Silt (%)
+
+# A problem: sand, silt, clay DO NOT add to 100. This is because the POLARIS database is a probabilistic construct.
+soils %>% 
+  dplyr::mutate(x = clay + sand + silt) %>% 
+  dplyr::pull(x) %>% 
+  summary()
+
+
+soils <- 
+  soils %>% 
+  # Rescale sand, silt, clay so that they add to 100 while respecting the proportionality among them
+  dplyr::mutate(scaling_factor = 100/(clay+sand+silt)) %>% 
+  dplyr::mutate(across(c(clay, sand, silt), ~ .x*scaling_factor)) %>% 
+  dplyr::select(subject, ph, om, sand, silt, clay) %>% 
+  # We want log ratios for sand, silt, clay as they are compositional.
+  # Will use clay as the reference:
+  dplyr::mutate(log_sand_clay = log(sand/clay)) %>% 
+  dplyr::mutate(log_silt_clay = log(silt/clay)) %>% 
+  dplyr::select(subject, ph, om, log_sand_clay, log_silt_clay)
+
+# No duplicated rows:
+find.dup.rows(soils)
+```
+
+```{r environmental-vars-part-1}
+wm_load <- readr::read_csv(here::here("Data", "data_model_plus_weather_filtered.csv"), show_col_types = FALSE)
+
+wm_data <-
+  wm_load %>%
+  dplyr::select(subject, date, planting.date, t2m_max, t2m_mean, t2m_min, sm, rh) %>%
+  # wm_load has identical data for each of the sampling dates. This will filter out duplicated rows.
+  dplyr::distinct() %>% 
+  dplyr::arrange(subject, planting.date, date) %>% 
+  # Calculate dap (as a numeric):
+  dplyr::mutate(dap = as.numeric(date - planting.date)) %>%
+  # Convert temperatures from Kelvin to degrees Celsius:
+  dplyr::mutate(across(c(t2m_max:t2m_min), ~ .x - 273.15)) %>%
+  # Estimate GDD (base 0). NB: base 0 is reasonable for snap bean; see the Jenni et al. (2000) paper.
+  # I think we want GDD to start accumulating the day after planting date onwards...
+  # I use the day after planting, because we don't know exactly what time of the day the field was planted.
+  dplyr::mutate(gdd = ifelse(dap <= 0, 0, (t2m_max + t2m_min)*0.5 - 0)) %>%
+  # Calculate saturation vapor pressure (es):
+  dplyr::mutate(es = 0.61078 * exp((17.27 * t2m_mean) / (t2m_mean + 237.3))) %>% 
+  # Calculate actual vapor pressure (ea):
+  dplyr::mutate(ea = (rh / 100) * es) %>% 
+  # Calculate VPD (kPa):
+  dplyr::mutate(vpd = es - ea) %>% 
+  dplyr::select(subject, date, gdd, sm, vpd)
+
+summary(wm_data)
+# No duplicate rows:
+find.dup.rows(wm_data)  
+
+# For each subject, we have planting date and sampling date
+# Our goal is to estimate, at each sampling date:
+# - GDD (accumulated)
+# - sm (mean from planting to dap)
+# - vpd (mean from planting to dap) 
+
+smry.vars <- function(i) {
+  # Create summary variables between planting date and the sampling date for:
+  # GDD (accumulated)
+  # sm (mean from planting to dap)
+  # vpd (mean from planting to dap) 
+  
+  # Args:
+  #  i = a numeric value for pulling a row in the ith position
+  # Returns:
+  #  a data frame of the estimated variables
+  
+  # Use the `agron` dataframe to get the subject, planting.date and sampling.date
+  foo <- 
+    agron %>% 
+    dplyr::slice(i) %>% 
+    dplyr::select(subject, planting.date, sampling.date)
+  
+  # Prep from wm_data:
+  prepped_dat <-
+    wm_data %>% 
+    dplyr::filter(subject == foo$subject, date >= foo$planting.date, date <= foo$sampling.date) %>% 
+    dplyr::arrange(subject, date)
+  
+  
+  # The cumulative gdd from the planting date to the sampling date:
+  c_gdd <- 
+    prepped_dat %>% 
+    dplyr::mutate(x = cumsum(gdd)) %>%
+    dplyr::pull(x) %>%
+    dplyr::last()
+  
+  # The mean sm (from planting to sampling date):
+  mean_sm <- 
+    prepped_dat %>% 
+    dplyr::summarise(x = mean(sm)) %>%
+    dplyr::pull(x)
+  
+  # The mean vpd (from planting to sampling date):
+  mean_vpd <- 
+    prepped_dat %>% 
+    dplyr::summarise(x = mean(vpd)) %>%
+    dplyr::pull(x)
+  
+  # Data frame of the values:
+  data.frame(subject = foo$subject, planting.date = foo$planting.date, sampling.date = foo$sampling.date, c_gdd, mean_sm, mean_vpd)
+  } # end function smry.vars
+
+# Examples of use:
+# smry.vars(254)  
+# smry.vars(255)
+
+# Now apply the function across all the rows of the `agron` data frame and bind the results into a single data frame:
+env_data <- purrr::map(1:nrow(agron), smry.vars) %>% dplyr::bind_rows()
+
+summary(env_data)
+# No duplicate rows:
+find.dup.rows(env_data)
+```
+
+```{r environmental-vars-part-2}
+# Load the sunshine duration and rain vars (the `wm_wvars` dataframe):
+load(here::here("Openmeteo", "wm_WeatherVars.RData"))  # wm_wvars
+
+# No duplicated rows:
+find.dup.rows(wm_wvars)
+```
+
+```{r clean-up}
+rm(df, wm_load, smry.vars)
+```
+
+NEXT: Join the separate dataframes together.
+
+```{r join-separate-dataframes}
+names(agron)
+names(soils)
+names(env_data)
+names(wm_wvars)
+
+# Joining of the different data frames to arrive at the finalized matrix:
+cc.df <- 
+  dplyr::left_join(agron, soils, by = "subject") %>% 
+  dplyr::left_join(., env_data, by = c("subject", "planting.date", "sampling.date")) %>% 
+  dplyr::left_join(., wm_wvars %>% select(-env), by = c("subject", "planting.date", "sampling.date")) %>% 
+  # Calculate dap:
+  dplyr::mutate(dap = as.numeric(sampling.date - planting.date), .after = "sampling.date")
+
+# Just some data checks:
+names(cc.df)
+summary(cc.df)
+skimr::skim(cc.df)
+
+# No. subjects: 375
+unique(cc.df$subject) %>% length()
+```
+
+```{r save-the-prepped-data, eval=FALSE}
+save(cc.df, file = here::here("CanopyClosure", "canclos.RData"))
+```
+
+# Describing the cc.df data
+
+```{r assign-variable-labels}
+# A good Intro to why variable labels may help is here:
+# https://www.pipinghotdata.com/posts/2022-09-13-the-case-for-variable-labels-in-r/
+
+# The variable names are not very descriptive (you yourself would have a hard time remembering what they encode or the units):
+# names(X)
+
+# Assign variable labels:
+# dap = days after planting date
+# vsw = volumetric soil water (0-7cm)
+
+ccdf_metadata <- tribble(
+    ~variable,           ~variable_label, 
+    "subject",              "Snap bean field",
+    "planting.date",        "Field's planting date (pd)",
+    "sampling.date",        "Date on which the field was observed/sampled (sd)",
+    "dap",                  "No. days after planting",
+    "drainage",             "Soil drainage class",
+    "hydrol",               "Soil hydrological group",
+    "year",                 "Year (growing season)",
+    "cd",                   "Climate division",
+    "harv.optim",           "Field harvested <=60 dap",
+    "can.closure",          "Canopy gap (cm)",
+    "ph",                   "Soil pH",
+    "om",                   "Soil organic matter content (%)",
+    "log_sand_clay",        "Logratio sand:clay",
+    "log_silt_clay",        "Logratio silt:clay",
+    "c_gdd",                "The cumulative growing degree days from pd to sd", 
+    "mean_sm",              "Mean vsw (m³/m³) from pd to sd",
+    "mean_vpd",             "Mean vapor pressure deficit (kPa) from pd to sd", 
+    "sundur",               "Total sunshine duration (hours) from pd to sd",
+    "rain",                 "Total rain (mm) from pd to sd"
+)
+
+# To quickly assign the variable labels, first create a named vector via deframe() with values as the variable labels and names as the variable names.
+ccdf_labels <- 
+  ccdf_metadata |> 
+  tibble::deframe()
+
+# Now assign the labels using the splice operator. Using the splice operator, labels are assigned via matching against the variable name, which means that variable order does not matter.
+ccdf_labelled <- 
+cc.df |> 
+  labelled::set_variable_labels(!!!ccdf_labels)
+```
+
+## Data dictionary
+
+<!-- One use of labels: Create a data dictionary -->
+
+```{r create-a-data-dictionary}
+ccdf_dictionary <- ccdf_labelled |> 
+  generate_dictionary()
+
+ccdf_dictionary |> 
+  make_kable()
+```
+
+## The variables
+
+```{r data-summary-table}
+ccdf_labelled |> 
+  dplyr::select(-subject, -planting.date, -sampling.date, -can.closure) |>
+  # Arrange names so that categorical variables are first:
+  dplyr::select(year, drainage, hydrol, cd, harv.optim, dap, ph:rain) |>
+  tbl_summary() |> 
+  bold_labels()
+```
+
+# Fitting canopy closure as a response variable
+
+```{r load-canclos-dataset}
+load(here::here("CanopyClosure", "canclos.RData"))  # cc.df
+
+# Filter to the vars needed for RF modeling:
+x <-
+  cc.df %>% 
+  dplyr::select(-subject, -planting.date, -sampling.date)
+```
+
+## Tuning a ranger model
+
+```{r tune-ranger-model, eval=T}
+library(ranger)
+library(tuneRanger)
+library(mlr)
+
+# Set seed for reproducibility:
+set.seed(14092)
+
+# For tuneRanger, a mlr task has to be created:
+cc.task <- mlr::makeRegrTask(data = x, target = "can.closure")
+
+
+## with tuneRanger (following Probst et al and the documentation)
+# Rough Estimation of the Tuning time
+estimateTimeTuneRanger(cc.task)
+
+# Tuning process:
+rf3 <- tuneRanger(cc.task, num.trees = 1000)
+
+# Save the fitted model so that you don't have to re-tune:
+save(rf3, file = here::here("CanopyClosure", "tunedRF.RData"))
+```
+
+```{r tuned-ranger-model-predictions}
+# Load the fitted model:
+load(here::here("CanopyClosure", "tunedRF.RData"))  # rf3
+
+# Mean of best 5 % of the results
+rf3
+# Model with the new tuned hyperparameters
+rf3$model
+
+# recommended parameters
+rf3$recommended.pars
+
+# the OOB RMSE
+sqrt(rf3$model$learner.model$prediction.error)
+
+# Prediction
+fitted.vals <- predict(rf3$model, newdata = x)$data
+class(rf3$model)
+
+# The predicted values vs actual values on the data:
+# There is slight under-prediction at high values of can.clos, and over-prediction at low values of can.clos
+fitted.vals %>%
+  ggplot(., aes(x = truth, y = response)) + 
+  geom_point(color = "orange", alpha = 0.5) + 
+  coord_fixed(xlim = c(0, 150), ylim = c(0, 150)) +
+  # The fitted line is blue:
+  geom_smooth(method = lm, formula = 'y ~ x') +
+  geom_abline(slope = 1, intercept = 0, color = "black") +
+  theme_bw() +
+  ylab("Predicted canopy gap (cm)") + 
+  xlab("Actual canopy gap (cm)") + 
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12, hjust = 0.5),
+        axis.title.x = element_text(size = 14), axis.title.y = element_text(size = 14))
+```
+
+```{r tuned-ranger-model-rmse}
+residuals <- x$can.closure - fitted.vals
+
+# RMSE: 2.52
+sqrt(sum(residuals^2)/nrow(x))
+```
+
+```{r prediction-at-35dap}
+# Prediction of can.clos at 35 dap entails:
+#   - setting dap = 35
+#   - setting harv.optim = 0
+#   - calculating c_gdd, mean_sm, mean_vpd, sundur, rain at 35 dap
+#   - placing all these values in the test data frame
+
+# Make the necessary adjustments to the `agron` data frame:
+agron <-
+  agron %>% 
+  dplyr::select(-sampling.date, -can.closure, -harv.optim) %>% 
+  # Removal of duplicated rows:
+  dplyr::distinct()
+
+# No duplicates:
+find.dup.rows(agron)
+
+
+###--- New env_data dataframe needed here ---###
+# remove the old env_data object
+rm(env_data)
+
+# Create the new env_data dataframe which holds the estimates of the environ vars to 35 dap:
+# wm_data has to be loaded (from above)
+
+smry.vars <- function(i) {
+  # Create summary variables between planting date and 35 dap for:
+  # GDD (accumulated to 35 dap)
+  # sm (mean from planting to 35 dap)
+  # vpd (mean from planting to 35 dap) 
+  
+  # Args:
+  #  i = a numeric for the ith row
+  # Returns:
+  #  a data frame with the estimated vars representing conditions from planting to 35 dap
+  
+  # Use the `agron` dataframe to get the subject, planting.date and sampling.date
+  foo <- 
+    agron %>% 
+    dplyr::slice(i) %>% 
+    dplyr::select(subject, planting.date) %>% 
+    dplyr::mutate(end.date = planting.date + 35)
+  
+  # Prep from wm_data:
+  prepped_dat <-
+    wm_data %>% 
+    dplyr::filter(subject == foo$subject, date >= foo$planting.date, date <= foo$end.date) %>% 
+    dplyr::arrange(subject, date)
+  
+  
+  # The cumulative gdd from the planting date to 35 dap:
+  c_gdd <- 
+    prepped_dat %>% 
+    dplyr::mutate(x = cumsum(gdd)) %>%
+    dplyr::pull(x) %>%
+    dplyr::last()
+  
+  # The mean sm (from planting to 35 dap):
+  mean_sm <- 
+    prepped_dat %>% 
+    dplyr::summarise(x = mean(sm)) %>%
+    dplyr::pull(x)
+  
+  # The mean vpd (from planting to 35 dap):
+  mean_vpd <- 
+    prepped_dat %>% 
+    dplyr::summarise(x = mean(vpd)) %>%
+    dplyr::pull(x)
+  
+  # Data frame of the values:
+  data.frame(subject = foo$subject, planting.date = foo$planting.date, c_gdd, mean_sm, mean_vpd)
+  } # end function smry.vars
+
+# Now apply the function across all the rows of the `agron` data frame and bind the results into a single data frame:
+env_data <- purrr::map(1:nrow(agron), smry.vars) %>% dplyr::bind_rows() %>% dplyr::distinct()
+
+# No duplicated rows:
+find.dup.rows(env_data)
+###--- ---------------------------------- ---###
+
+# Load the sunshine duration and rain vars at 35 dap (the `wm_wvars_35dap` dataframe):
+load(here::here("Openmeteo", "wm_WeatherVars_35dap.RData"))  # wm_wvars_35dap
+
+# There are no duplicate rows:
+find.dup.rows(wm_wvars_35dap)
+
+# Joining of the different data frames to arrive at the finalized matrix:
+cc.df.35dap <- 
+  dplyr::left_join(agron, soils, by = "subject") %>% 
+  dplyr::left_join(., env_data, by = c("subject", "planting.date")) %>% 
+  dplyr::left_join(., wm_wvars_35dap %>% select(-env), by = c("subject", "planting.date")) %>% 
+  dplyr::mutate(dap = 35, harv.optim = 0) %>% 
+  dplyr::mutate(harv.optim = factor(harv.optim, levels = c(0, 1), labels = c("Yes", "No"))) %>% 
+  dplyr::select(-planting.date)
+ 
+
+# Checks:
+find.dup.rows(cc.df.35dap)  # none
+summary(cc.df.35dap)
+names(cc.df.35dap)
+names(x)
+
+# Load the fitted model:
+load(here::here("CanopyClosure", "tunedRF.RData"))  # rf3
+
+
+# Prediction:
+fitted.vals <- predict(rf3$model, newdata = cc.df.35dap)$data
+summary(fitted.vals$response)
+
+
+# Add the predicted can.clos at 35 dap to the cc.df.35dap dataframe:
+cc.df.35dap <-
+  cc.df.35dap %>% 
+  dplyr::mutate(cc35 = fitted.vals$response) %>% 
+  # Well, all we really need from this is subject and cc35:
+  dplyr::select(subject, cc35)
+  
+summary(cc.df.35dap)
+
+
+# And that should do it for getting a var representing canopy closure at 35 dap.
+# Save the final result:
+save(cc.df.35dap, file = here::here("CanopyClosure", "cc.df.35dap.RData"))
+```
+
+```{r canclos-at-35-dap-summary, eval=FALSE}
+# Did all the work to get the cc var at 35 dap lead to anything that could be meaningfully used?
+
+# The observational (survey) matrix:
+load(here::here("Data", "Survey.RData"))  # df
+
+# Load the canopy closure estimates at 35 dap:
+load(here::here("CanopyClosure", "cc.df.35dap.RData"))  # cc.df.35dap
+
+x <-
+  df %>% 
+  # Filter out the PA fields (Potter county):
+  dplyr::filter(! county == "Potter") %>% 
+  dplyr::select(subject, latitude, longitude, sampling.date, wm, vg) %>% 
+  dplyr::filter(!is.na(latitude), !is.na(longitude)) %>% 
+  dplyr::arrange(subject, sampling.date) %>% 
+  dplyr::group_by(subject) %>%
+  # The last sampling date for each field:
+  dplyr::slice_max(sampling.date, n = 1, with_ties = FALSE) %>%
+  dplyr::ungroup() %>% 
+  dplyr::filter(!is.na(wm)) %>% 
+  dplyr::mutate(wm = ifelse(wm > 0, 1, 0)) %>% 
+  # Add cc35 to the main dataframe:
+  dplyr::left_join(cc.df.35dap, by = "subject") 
+
+summary(x)
+
+# On average, fields with wm have more closed canopies:
+x %>% 
+  dplyr::group_by(wm) %>% 
+  dplyr::summarise(n = n(), mean = mean(cc35), median = median(cc35), sd = sd(cc35))
+
+
+x %>% 
+  dplyr::add_count(vg, wm) %>%
+  dplyr::group_by(vg, wm) %>% 
+  dplyr::summarise(mean_cc35 = mean(cc35), n = mean(n))
+
+# But its value as a predictor may be limited...
+x %>%
+  ggplot(aes(cc35)) +
+  geom_histogram(col = "white", bins = 30) +
+  facet_wrap(~ as.factor(wm), ncol = 1, 
+             labeller = as_labeller(c("0" = "No White Mold", "1" = "White Mold Present"))) +
+  geom_rug(col = "blue", alpha = 0.5) + 
+  labs(x = "Canopy gap at 35 dap (cm)") +
+  theme_bw()
+```
